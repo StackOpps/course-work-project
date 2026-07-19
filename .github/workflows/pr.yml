@@ -16,6 +16,7 @@ jobs:
       working-directory: infra/
       Deploy: false
       environment: development
+      aws-region: eu-west-2
     secrets:
       AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}

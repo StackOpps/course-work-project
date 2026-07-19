@@ -14,7 +14,6 @@ on:
       aws-region:
         description: "Overrides TF_VAR_aws-region for this run, e.g. to re-Deploy infra/ against the DR region during a failover"
         type: string
-        default: "eu-west-2"
       environment:
         description: "GitHub environment to run the job under (optional)"
         type: string
@@ -40,7 +39,7 @@ permissions:
   contents: read
 
 jobs:
-  terraform:
+  terraform-build:
     name: "terraform (${{ inputs.working-directory }})"
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
@@ -55,7 +54,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
-          aws-region: ${{ vars.aws-region }}
+          aws-region: ${{ inputs.aws-region }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
