@@ -74,7 +74,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=${{ inputs.tf-state-bucket }}" \
-            -backend-config="key=${{ environment }}/terraform.tfstate" \
+            -backend-config="key=${{inputs.environment }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.aws-region }}" \
             -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
