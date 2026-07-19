@@ -1,0 +1,117 @@
+name: "DR Failover"
+
+# Started by EventBridge (via an API destination calling this repo's
+# repository_dispatch API) once the composite alarm confirms a sustained
+# failure, or when AWS Health reports a region/service incident — Section
+# 3.3: "No human has to notice the outage first." workflow_dispatch is kept
+# only as a manual escape hatch for testing this path directly.
+on:
+  repository_dispatch:
+    types: [dr-composite-alarm, dr-aws-health]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  failover:
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+        working-directory: .
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Re-applies the same infra/ configuration infra rebuilds the primary
+      # region from, but against a second state key and var.dr_region — the
+      # "same code that built the primary region" rebuilding it in the DR
+      # region (Section 3.3).
+      - name: Provision DR-region infrastructure
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=infra-dr.tfstate" \
+            -backend-config="region=${{ vars.TF_STATE_REGION }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}" \
+            -backend-config="encrypt=true"
+          terraform apply -auto-approve -input=false
+        env:
+          TF_VAR_aws_region: ${{ vars.DR_REGION }}
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+          TF_VAR_route53_zone_name: ${{ vars.ROUTE53_ZONE_NAME }}
+          TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
+          TF_VAR_github_owner: ${{ vars.GITHUB_OWNER }}
+          TF_VAR_github_repo: ${{ vars.GITHUB_REPO }}
+          TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
+
+      - name: Read DR load balancer address
+        id: dr_alb
+        run: |
+          echo "dns_name=$(terraform output -raw alb_dns_name)" >> "$GITHUB_OUTPUT"
+          echo "zone_id=$(terraform output -raw alb_zone_id)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore data from the DR vault and measure RTO/RPO
+        working-directory: .
+        run: |
+          python scripts/restore_test.py \
+            --resource-type RDS \
+            --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
+            --vault "${{ vars.DR_BACKUP_VAULT_NAME }}" \
+            --iam-role-arn "${{ secrets.BACKUP_IAM_ROLE_ARN }}" \
+            --region "${{ vars.DR_REGION }}"
+
+      - name: Smoke check the DR environment
+        run: |
+          curl --fail --retry 10 --retry-delay 15 --retry-connrefused \
+            "http://${{ steps.dr_alb.outputs.dns_name }}/"
+
+      # The DNS cutover is an explicit, imperative step taken by this
+      # workflow once smoke checks pass — not something Terraform apply does
+      # as a side effect — so the primary-region state never has to know
+      # about it (Section 3.3: "the workflow updates the Route 53 record").
+      - name: Point Route 53 at the DR environment
+        working-directory: .
+        run: |
+          aws route53 change-resource-record-sets \
+            --hosted-zone-id "${{ vars.ROUTE53_ZONE_ID }}" \
+            --change-batch '{
+              "Changes": [{
+                "Action": "UPSERT",
+                "ResourceRecordSet": {
+                  "Name": "${{ vars.APP_DOMAIN_NAME }}",
+                  "Type": "A",
+                  "AliasTarget": {
+                    "HostedZoneId": "${{ steps.dr_alb.outputs.zone_id }}",
+                    "DNSName": "${{ steps.dr_alb.outputs.dns_name }}",
+                    "EvaluateTargetHealth": true
+                  }
+                }
+              }]
+            }'
+
+      - name: Upload failover results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-failover-results
+          path: results/

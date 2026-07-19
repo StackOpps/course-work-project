@@ -1,22 +1,31 @@
 name: "Pull Request"
+
 on:
   pull_request:
     branches:
       - main
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  build:
-    runs-on: ubuntu-slim
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run tests
-        run: |
-          pytest
+  terraform-plan:
+    strategy:
+      matrix:
+        include:
+          - working-directory: infra
+            backend-key: infra.tfstate
+          - working-directory: backup
+            backend-key: backup.tfstate
+          - working-directory: restore_testing
+            backend-key: restore-testing.tfstate
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: ${{ matrix.working-directory }}
+      backend-key: ${{ matrix.backend-key }}
+      apply: false
+    secrets:
+      AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
