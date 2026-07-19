@@ -7,10 +7,6 @@ on:
         description: "Terraform root module to run against (infra, backup, or restore_testing)"
         type: string
         required: true
-      backend-key:
-        description: "S3 backend state key for this stack, e.g. infra.tfstate"
-        type: string
-        required: true
       Deploy:
         description: "Run terraform Deploy instead of terraform plan"
         type: boolean
@@ -18,7 +14,7 @@ on:
       aws-region:
         description: "Overrides TF_VAR_aws-region for this run, e.g. to re-Deploy infra/ against the DR region during a failover"
         type: string
-        default: ""
+        default: "eu-west-2"
       environment:
         description: "GitHub environment to run the job under (optional)"
         type: string
@@ -73,7 +69,7 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ inputs.tf-state-bucket }}" \
+            -backend-config="bucket=terraform-tfstate-${{ inputs.aws-region}}-bckt" \
             -backend-config="key=${{inputs.environment }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.aws-region }}" \
             -backend-config="use_lockfile=true" \
