@@ -10,14 +10,24 @@ on:
 permissions:
   id-token: write
   contents: read
-
 jobs:
-  terraform-apply:
+  terraform-deploy-development:
     uses: ./.github/workflows/_terraform.yml
     with:
-      working-directory: infra
-      backend-key: infra.tfstate
-      apply: true
+      working-directory: infra/
+      Deploy: true
+      environment: development
+    secrets:
+      AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
+
+  terraform-deploy-production:
+    uses: ./.github/workflows/_terraform.yml
+    needs: terraform-deploy-development
+    with:
+      working-directory: infra/
+      Deploy: true
       environment: production
     secrets:
       AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}

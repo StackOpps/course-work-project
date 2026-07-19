@@ -10,21 +10,24 @@ permissions:
   contents: read
 
 jobs:
-  terraform-plan:
-    strategy:
-      matrix:
-        include:
-          - working-directory: infra
-            backend-key: infra.tfstate
-          - working-directory: backup
-            backend-key: backup.tfstate
-          - working-directory: restore_testing
-            backend-key: restore-testing.tfstate
+  terraform-plan-development:
     uses: ./.github/workflows/_terraform.yml
     with:
-      working-directory: ${{ matrix.working-directory }}
-      backend-key: ${{ matrix.backend-key }}
-      apply: false
+      working-directory: infra/
+      Deploy: false
+      environment: development
+    secrets:
+      AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
+
+  terraform-plan-production:
+    uses: ./.github/workflows/_terraform.yml
+    needs: terraform-plan-development
+    with:
+      working-directory: infra/
+      Deploy: false
+      environment: production
     secrets:
       AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
