@@ -22,16 +22,3 @@ jobs:
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
       TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
-
-  terraform-deploy-production:
-    uses: ./.github/workflows/_terraform.yml
-    needs: terraform-deploy-development
-    with:
-      working-directory: infra/
-      Deploy: true
-      environment: production
-    secrets:
-      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
-      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
-      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
-      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}

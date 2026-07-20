@@ -76,15 +76,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        # aws-region is only set for the DR-failover call, which re-applies
-        # infra/ against var.dr_region; exporting it conditionally (rather
-        # than always setting TF_VAR_aws-region, even empty) keeps every
-        # other caller on infra's own var.aws-region default.
-        run: |
-          if [ -n "${{ inputs.aws-region }}" ]; then
-            export TF_VAR_aws-region="${{ inputs.aws-region }}"
-          fi
-          terraform plan -out=tfplan
+        run: terraform plan -out=tfplan
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
