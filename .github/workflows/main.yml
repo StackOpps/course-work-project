@@ -18,7 +18,8 @@ jobs:
       Deploy: true
       environment: development
     secrets:
-      AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
       TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
 
@@ -30,6 +31,7 @@ jobs:
       Deploy: true
       environment: production
     secrets:
-      AWS_TERRAFORM_ROLE_ARN: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
       TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
