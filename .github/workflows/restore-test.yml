@@ -1,0 +1,46 @@
+name: "Scheduled Restore Test"
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      resource_type:
+        description: "Resource to restore"
+        required: true
+        type: choice
+        options: [RDS, EC2, S3]
+        default: RDS
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  restore-test:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Run restore test
+        run: |
+          python scripts/restore_test.py \
+            --resource-type "${{ inputs.resource_type || 'RDS' }}" \
+            --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
+            --vault "${{ vars.BACKUP_VAULT_NAME }}" \
+            --iam-role-arn "${{ secrets.BACKUP_IAM_ROLE_ARN }}" \
+            --region "${{ vars.AWS_REGION }}"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-test-results
+          path: results/
