@@ -92,6 +92,6 @@ jobs:
 
       - name: Terraform Destroy
         if: ${{ inputs.Destroy }}
-        run: terraform destroy -auto-approve
+        run: terraform destroy -auto-approve  tfplan
 
 
