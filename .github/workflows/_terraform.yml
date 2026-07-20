@@ -48,6 +48,9 @@ jobs:
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,8 +89,6 @@ jobs:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
           TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
 
       - name: Terraform Deploy
         if: ${{ inputs.Deploy }}
