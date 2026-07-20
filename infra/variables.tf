@@ -104,7 +104,7 @@ variable "db_password" {
   description = "Master password for the RDS instance; supply via TF_VAR_db_password or a gitignored tfvars file, never commit it"
   type        = string
   sensitive   = true
-  default = null
+  default     = null
 }
 
 variable "backup_schedule_cron" {
@@ -140,36 +140,36 @@ variable "backup_vault_lock_changeable_for_days" {
 variable "alert_email" {
   description = "Email address that receives CloudWatch/AWS Backup alarm notifications"
   type        = string
-  default = ""
+  default     = ""
 }
 
 variable "route53_zone_name" {
   description = "Existing Route 53 public hosted zone CraftHaven's storefront is delegated under, e.g. crafthaven.example"
   type        = string
-  default = ""
+  default     = ""
 }
 
 variable "app_domain_name" {
   description = "Full domain name customers use for the storefront, e.g. shop.crafthaven.example"
   type        = string
-  default = ""
+  default     = ""
 }
 
 variable "github_owner" {
   description = "GitHub organisation/user that owns the CraftHaven repository, used to target the restore workflow's repository_dispatch API call"
   type        = string
-  default = ""
+  default     = ""
 }
 
 variable "github_repo" {
   description = "GitHub repository name that owns the restore workflow, used to target its repository_dispatch API call"
   type        = string
-  default = ""
+  default     = ""
 }
 
 variable "github_pat" {
   description = "Fine-grained GitHub personal access token (Contents: read, Actions: write) EventBridge uses to call the repository_dispatch API and start the restore workflow; never commit a real value"
   type        = string
   sensitive   = true
-  default = ""
+  default     = ""
 }
