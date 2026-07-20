@@ -1,0 +1,27 @@
+name: "Destroy Infrastructure"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy'
+        required: true
+        default: 'development'
+  schedule:
+    - cron: '1/2 * * * *' # Run every 2 hours
+
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  terraform-deploy:
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: infra/
+      destroy: true
+      environment: development
+    secrets:
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
