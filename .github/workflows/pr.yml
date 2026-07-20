@@ -10,13 +10,12 @@ permissions:
   contents: read
 
 jobs:
-  terraform-plan-development:
+  terraform-plan:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
       Deploy: false
       environment: development
-      aws-region: eu-west-2
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}

@@ -4,14 +4,12 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "infra/**"
 
 permissions:
   id-token: write
   contents: read
 jobs:
-  terraform-deploy-development:
+  terraform-deploy:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
