@@ -11,6 +11,10 @@ on:
         description: "Run terraform Deploy instead of terraform plan"
         type: boolean
         default: false
+      Destroy:
+        description: "Run terraform Destroy instead of terraform plan"
+        type: boolean
+        default: false
       aws-region:
         description: "Overrides TF_VAR_aws-region for this run, e.g. to re-Deploy infra/ against the DR region during a failover"
         type: string
