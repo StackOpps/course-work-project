@@ -84,7 +84,7 @@ jobs:
 
       - name: Terraform Deploy
         if: ${{ inputs.Deploy }}
-        run: terraform Deploy -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
       - name: Terraform Destroy
         if: ${{ inputs.Destroy }}
