@@ -27,12 +27,46 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
 resource "aws_s3_bucket_public_access_block" "assets" {
   bucket = aws_s3_bucket.assets.id
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
 }
 
+resource "aws_s3_bucket_website_configuration" "asset" {
+  bucket = aws_s3_bucket.assets.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "error.html"
+  }
+}
+resource "aws_s3_bucket_ownership_controls" "static" {
+  bucket = aws_s3_bucket.assets.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_object" "site_index" {
+  bucket       = aws_s3_bucket.assets.id
+  key          = "index.html"
+  source       = "${path.module}/site_src/index.html"
+  etag         = filemd5("${path.module}/site_src/index.html")
+  content_type = "text/html"
+}
+
+resource "aws_s3_object" "site_error" {
+  bucket       = aws_s3_bucket.assets.id
+  key          = "error.html"
+  source       = "${path.module}/site_src/error.html"
+  etag         = filemd5("${path.module}/site_src/error.html")
+  content_type = "text/html"
+}
 # Separate bucket for CloudTrail logs (monitoring.tf) so trail delivery isn't
 # tangled with product-asset lifecycle rules or bucket policy.
 resource "aws_s3_bucket" "cloudtrail" {

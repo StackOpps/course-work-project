@@ -100,7 +100,7 @@ resource "aws_synthetics_canary" "storefront" {
   execution_role_arn   = aws_iam_role.canary[0].arn
   handler              = "canary.handler"
   zip_file             = data.archive_file.canary.output_path
-  runtime_version      = "syn-nodejs-3."
+  runtime_version      = "syn-nodejs-puppeteer-9.1"
   start_canary         = true
 
   schedule {
