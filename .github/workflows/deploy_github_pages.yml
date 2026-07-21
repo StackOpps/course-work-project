@@ -1,11 +1,11 @@
 name: Deploy To GitHub Pages
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-
+  workflow_dispatch:
+    inputs:
+      working-directory:
+        description: "Working directory for the job"
+        default: "infra/"
 jobs:
   deploy:
     runs-on: ubuntu-22.04

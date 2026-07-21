@@ -104,44 +104,43 @@ variable "db_password" {
   description = "Master password for the RDS instance; supply via TF_VAR_db_password or a gitignored tfvars file, never commit it"
   type        = string
   sensitive   = true
-  default     = null
 }
 
-variable "backup_schedule_cron" {
-  description = "Cron expression (AWS Backup format) for the daily backup plan"
-  type        = string
-  default     = "cron(0 3 * * ? *)"
-}
+# variable "backup_schedule_cron" {
+#   description = "Cron expression (AWS Backup format) for the daily backup plan"
+#   type        = string
+#   default     = "cron(0 3 * * ? *)"
+# }
 
-variable "backup_retention_days" {
-  description = "How long AWS Backup keeps recovery points before deleting them"
-  type        = number
-  default     = 35
-}
+# variable "backup_retention_days" {
+#   description = "How long AWS Backup keeps recovery points before deleting them"
+#   type        = number
+#   default     = 35
+# }
 
-variable "backup_vault_lock_min_retention_days" {
-  description = "Vault Lock minimum retention period recovery points must be kept for, in days"
-  type        = number
-  default     = 7
-}
+# variable "backup_vault_lock_min_retention_days" {
+#   description = "Vault Lock minimum retention period recovery points must be kept for, in days"
+#   type        = number
+#   default     = 7
+# }
 
-variable "backup_vault_lock_max_retention_days" {
-  description = "Vault Lock maximum retention period recovery points may be kept for, in days"
-  type        = number
-  default     = 90
-}
+# variable "backup_vault_lock_max_retention_days" {
+#   description = "Vault Lock maximum retention period recovery points may be kept for, in days"
+#   type        = number
+#   default     = 90
+# }
 
-variable "backup_vault_lock_changeable_for_days" {
-  description = "Cooling-off period during which the Vault Lock policy can still be deleted, before it becomes immutable"
-  type        = number
-  default     = 3
-}
+# variable "backup_vault_lock_changeable_for_days" {
+#   description = "Cooling-off period during which the Vault Lock policy can still be deleted, before it becomes immutable"
+#   type        = number
+#   default     = 3
+# }
 
-variable "alert_email" {
-  description = "Email address that receives CloudWatch/AWS Backup alarm notifications"
-  type        = string
-  default     = ""
-}
+# variable "alert_email" {
+#   description = "Email address that receives CloudWatch/AWS Backup alarm notifications"
+#   type        = string
+#   default     = ""
+# }
 
 variable "route53_zone_name" {
   description = "Existing Route 53 public hosted zone CraftHaven's storefront is delegated under, e.g. crafthaven.example"
