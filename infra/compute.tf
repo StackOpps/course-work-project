@@ -166,7 +166,7 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2.name
 }
 
-resource "aws_instance" "web" {
+resource "aws_instance" "crafthavens" {
   ami                    = local.ec2_ami_id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.private[0].id
