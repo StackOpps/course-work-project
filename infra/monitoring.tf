@@ -47,7 +47,7 @@ resource "aws_cloudwatch_metric_alarm" "ec2_status_check" {
   ok_actions          = [aws_sns_topic.alerts.arn]
 
   dimensions = {
-    InstanceId = aws_instance.web.id
+    InstanceId = aws_instance.crafthavens.id
   }
 }
 

@@ -123,7 +123,7 @@ resource "aws_lb_listener" "web_https" {
 
 resource "aws_lb_target_group_attachment" "web" {
   target_group_arn = aws_lb_target_group.web.arn
-  target_id        = aws_instance.web.id
+  target_id        = aws_instance.crafthavens.id
   port             = 80
 }
 
