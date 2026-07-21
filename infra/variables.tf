@@ -151,7 +151,11 @@ variable "route53_zone_name" {
 variable "app_domain_name" {
   description = "Full domain name customers use for the storefront, e.g. shop.crafthaven.example"
   type        = string
-  default     = ""
+
+  validation {
+    condition     = length(var.app_domain_name) > 0
+    error_message = "app_domain_name must not be empty; set TF_VAR_app_domain_name (CI) or infra/terraform.tfvars (local)."
+  }
 }
 
 variable "github_owner" {
