@@ -136,11 +136,11 @@ variable "db_password" {
 #   default     = 3
 # }
 
-# variable "alert_email" {
-#   description = "Email address that receives CloudWatch/AWS Backup alarm notifications"
-#   type        = string
-#   default     = ""
-# }
+variable "alert_email" {
+  description = "Email address that receives CloudWatch/AWS Backup alarm notifications"
+  type        = string
+  default     = ""
+}
 
 variable "route53_zone_name" {
   description = "Existing Route 53 public hosted zone CraftHaven's storefront is delegated under, e.g. crafthaven.example"
