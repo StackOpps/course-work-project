@@ -173,6 +173,20 @@ resource "aws_instance" "web" {
   vpc_security_group_ids = [aws_security_group.web.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2.name
 
+  # Installs nginx and pulls the storefront's static content from the assets
+  # bucket (site_src/, uploaded via aws_s3_object in storage.tf) so the ALB
+  # health check on "/" has something to hit. depends_on below makes sure
+  # those objects exist before the sync runs.
+  user_data = <<-EOF
+    #!/bin/bash
+    set -euxo pipefail
+    dnf install -y nginx
+    aws s3 sync "s3://${aws_s3_bucket.assets.id}" /usr/share/nginx/html --delete
+    systemctl enable --now nginx
+  EOF
+
+  depends_on = [aws_s3_object.site_index, aws_s3_object.site_error]
+
   root_block_device {
     volume_size = 20
     volume_type = "gp3"
