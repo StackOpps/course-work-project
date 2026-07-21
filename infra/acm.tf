@@ -24,6 +24,7 @@ resource "aws_route53_record" "web_cert_validation" {
   records         = [each.value.record]
   ttl             = 60
   allow_overwrite = true
+  depends_on      = [aws_acm_certificate.web]
 }
 
 resource "aws_acm_certificate_validation" "web" {
