@@ -145,7 +145,7 @@ variable "alert_email" {
 variable "route53_zone_name" {
   description = "Existing Route 53 public hosted zone CraftHaven's storefront is delegated under, e.g. crafthaven.example"
   type        = string
-  default     = "crafthaven.ac.uk"
+  default     = "crafthavens.com"
 }
 
 variable "app_domain_name" {

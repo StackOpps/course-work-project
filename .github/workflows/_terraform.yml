@@ -48,6 +48,7 @@ jobs:
   terraform-build:
     name: "terraform (${{ inputs.working-directory }})"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: ${{ inputs.environment }}
     defaults:
       run:
