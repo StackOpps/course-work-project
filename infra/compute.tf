@@ -181,7 +181,8 @@ resource "aws_instance" "crafthavens" {
     #!/bin/bash
     set -euxo pipefail
     dnf install -y nginx
-    aws s3 sync "s3://${aws_s3_bucket.assets.id}" /usr/share/nginx/html --delete
+    rm -rf /usr/share/nginx/html/*
+    aws s3 sync "s3://${aws_s3_bucket.assets.id}" /usr/share/nginx/html
     systemctl enable --now nginx
   EOF
 

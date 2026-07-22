@@ -1,11 +1,3 @@
-# Secondary (DR-region) backup vault. Kept as its own root module, deployed
-# by .github/workflows/deploy_dr.yml, rather than folded into infra/: infra's
-# backup plan (primary_vault.tf) targets this vault's ARN by name convention
-# only, so this stack has no dependency on infra's state and infra has no
-# dependency on this stack's outputs.
-#
-# The vault name must stay in sync with the `dr_vault_name` local infra/
-# computes in primary_vault.tf: "${project_name}-${environment}-dr-vault".
 
 locals {
   name = "${var.project_name}-${var.environment}"
