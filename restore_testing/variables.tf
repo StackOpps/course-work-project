@@ -13,7 +13,7 @@ variable "environment" {
 variable "aws_region" {
   description = "Region the primary backup vault lives in; must match infra/'s var.primary_region"
   type        = string
-  default     = "eu-west-2"
+  default     = "eu-west-1"
 }
 
 variable "schedule_expression" {

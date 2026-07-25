@@ -11,8 +11,8 @@ locals {
   # Matches the vault infra/primary_vault.tf creates and the role it grants
   # AWS Backup, both referenced here by name convention only — this stack
   # has no Terraform dependency on infra/'s state.
-  primary_vault_arn = "arn:aws:backup:${var.aws_region}:${data.aws_caller_identity.current.account_id}:backup-vault:${local.name}-vault"
-  backup_role_arn   = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.name}-backup-role"
+  dr_vault_arn    = "arn:aws:backup:${var.aws_region}:${data.aws_caller_identity.current.account_id}:backup-vault:${local.name}-vault"
+  backup_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.name}-backup-role"
 }
 
 resource "aws_backup_restore_testing_plan" "main" {
@@ -22,7 +22,7 @@ resource "aws_backup_restore_testing_plan" "main" {
 
   recovery_point_selection {
     algorithm             = "LATEST_WITHIN_WINDOW"
-    include_vaults        = [local.primary_vault_arn]
+    include_vaults        = [local.dr_vault_arn]
     recovery_point_types  = ["SNAPSHOT"]
     selection_window_days = 7
   }
