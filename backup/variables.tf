@@ -38,7 +38,7 @@ variable "backup_vault_lock_changeable_for_days" {
 variable "backup_schedule_cron" {
   description = "Cron expression (AWS Backup format) for the daily backup plan"
   type        = string
-  default     = "cron(0/60 * * * ? *)" # 
+  default     = "cron(0 * * * ? *)" # 
 }
 
 variable "backup_retention_days" {
