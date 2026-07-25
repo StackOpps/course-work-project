@@ -2,8 +2,8 @@
 locals {
   name = "${var.project_name}-${var.environment}"
   backup_polic_arns = [
-    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForBackup",
-    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForRestores",
+    "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup",
+    "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores",
     "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
   ]
 }
