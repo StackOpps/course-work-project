@@ -14,7 +14,7 @@ permissions:
   id-token: write
   contents: read
 jobs:
-  terraform-deploy:
+  terraform-destroy-infra:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
@@ -25,3 +25,28 @@ jobs:
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
       TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
+
+
+  terraform-destroy-backup:
+      uses: ./.github/workflows/_terraform.yml
+      needs: terraform-destroy-infra
+      with:
+        working-directory: backup/
+        destroy: true
+        environment: backup
+      secrets:
+        AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+        AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+
+
+
+  terraform-destroy-restore-testing:
+      uses: ./.github/workflows/_terraform.yml
+      needs: terraform-destroy-backup
+      with:
+        working-directory: restore_testing/
+        destroy: true
+        environment: restore-testing
+      secrets:
+        AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+        AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
