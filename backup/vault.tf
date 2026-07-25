@@ -7,7 +7,7 @@ locals {
     "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
   ]
 }
-data "aws_iam_policy" "BackupPolicy" {
+data "aws_iam_policy" "backup_policy" {
   provider = aws.primary
   for_each = toset(local.backup_polic_arns)
   arn      = each.value
@@ -58,7 +58,7 @@ resource "aws_iam_role" "backup" {
 }
 
 resource "aws_iam_role_policy_attachment" "" {
-  for_each = data.aws_iam_policy.BackupPolicy
+  for_each = data.aws_iam_policy.backup_policy
   provider = aws.primary
 
   role       = aws_iam_role.backup.name
