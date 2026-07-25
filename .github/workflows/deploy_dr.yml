@@ -1,27 +1,34 @@
-name: "Deploy DR Vault"
+name: "Deploy Backup Infrastructure"
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "backup/**"
-  workflow_dispatch: {}
+ workflow_dispatch:
+    inputs:
+      Deploy:
+        description: "Whether to deploy the Terraform plan"
+        required: true
+        type: boolean
+        default: true
+      aws-region:
+        description: "Overrides TF_VAR_aws-region for this run, e.g. to re-Deploy infra/ against the DR region during a failover"
+        type: string
+        default: eu-west-1
+      environment:
+        description: "GitHub environment to run the job under (optional)"
+        type: string
+        default: backup
+   
 
 permissions:
   id-token: write
   contents: read
-
 jobs:
-  terraform-apply:
+  terraform-deploy:
     uses: ./.github/workflows/_terraform.yml
     with:
-      working-directory: backup
-      backend-key: backup.tfstate
-      apply: true
-      environment: production
+      working-directory: backup/
+      Deploy: true
+      aws-region: eu-west-1
+      environment: backup
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
-      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
-      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }} 

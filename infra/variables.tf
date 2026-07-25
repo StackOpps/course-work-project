@@ -5,7 +5,7 @@ variable "aws_region" {
 }
 
 variable "primary_region" {
-  description = "CraftHaven's normal-operation region; resources that must exist only once (backup plan, canary, alarms) are skipped when aws_region differs, e.g. during a DR failover re-apply"
+  description = "CraftHaven's normal-operation region; resources that must exist only once (backup plan, DNS record) are skipped when aws_region differs, e.g. during a DR failover re-apply"
   type        = string
   default     = "eu-west-2"
 }
@@ -106,38 +106,8 @@ variable "db_password" {
   sensitive   = true
 }
 
-# variable "backup_schedule_cron" {
-#   description = "Cron expression (AWS Backup format) for the daily backup plan"
-#   type        = string
-#   default     = "cron(0 3 * * ? *)"
-# }
-
-# variable "backup_retention_days" {
-#   description = "How long AWS Backup keeps recovery points before deleting them"
-#   type        = number
-#   default     = 35
-# }
-
-# variable "backup_vault_lock_min_retention_days" {
-#   description = "Vault Lock minimum retention period recovery points must be kept for, in days"
-#   type        = number
-#   default     = 7
-# }
-
-# variable "backup_vault_lock_max_retention_days" {
-#   description = "Vault Lock maximum retention period recovery points may be kept for, in days"
-#   type        = number
-#   default     = 90
-# }
-
-# variable "backup_vault_lock_changeable_for_days" {
-#   description = "Cooling-off period during which the Vault Lock policy can still be deleted, before it becomes immutable"
-#   type        = number
-#   default     = 3
-# }
-
 variable "alert_email" {
-  description = "Email address that receives CloudWatch/AWS Backup alarm notifications"
+  description = "Email address that receives CloudWatch alarm notifications (site-down, EC2/RDS health)"
   type        = string
   default     = ""
 }
@@ -158,21 +128,3 @@ variable "app_domain_name" {
   }
 }
 
-variable "github_owner" {
-  description = "GitHub organisation/user that owns the CraftHaven repository, used to target the restore workflow's repository_dispatch API call"
-  type        = string
-  default     = ""
-}
-
-variable "github_repo" {
-  description = "GitHub repository name that owns the restore workflow, used to target its repository_dispatch API call"
-  type        = string
-  default     = ""
-}
-
-variable "github_pat" {
-  description = "Fine-grained GitHub personal access token (Contents: read, Actions: write) EventBridge uses to call the repository_dispatch API and start the restore workflow; never commit a real value"
-  type        = string
-  sensitive   = true
-  default     = ""
-}

@@ -47,7 +47,7 @@ resource "aws_db_instance" "main" {
   publicly_accessible    = false
   multi_az               = false
 
-  # AWS Backup (backup.tf) is the system of record for recovery points, so
+  # AWS Backup (see backup/) is the system of record for recovery points, so
   # native automated backups are kept short — just enough for point-in-time
   # recovery between AWS Backup's daily snapshots, not long-term retention.
   backup_retention_period = 3

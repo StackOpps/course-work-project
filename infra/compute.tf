@@ -194,7 +194,7 @@ resource "aws_instance" "crafthavens" {
     encrypted   = true
   }
 
-  # Backup selection targets this tag directly (see backup.tf) so the
+  # Backup selection targets this tag directly (see backup/) so the
   # instance and its attached EBS volumes are captured without editing
   # the backup plan whenever the instance is replaced.
   tags = {

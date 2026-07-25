@@ -1,46 +1,34 @@
-name: "Scheduled Restore Test"
+name: "Deploy Restore Testinf"
+
 on:
-  schedule:
-    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
-  workflow_dispatch:
+ workflow_dispatch:
     inputs:
-      resource_type:
-        description: "Resource to restore"
+      Deploy:
+        description: "Whether to deploy the Terraform plan"
         required: true
-        type: choice
-        options: [RDS, EC2, S3]
-        default: RDS
+        type: boolean
+        default: true
+      aws-region:
+        description: "AWS region to run the restore testing against (e.g. to test restore from DR region)"
+        type: string
+        default: eu-west-1
+      environment:
+        description: "GitHub environment to run the job under (optional)"
+        type: string
+        default: restore_testing
+   
 
 permissions:
   id-token: write
   contents: read
-
 jobs:
-  restore-test:
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-      - name: Run restore test
-        run: |
-          python scripts/restore_test.py \
-            --resource-type "${{ inputs.resource_type || 'RDS' }}" \
-            --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
-            --vault "${{ vars.BACKUP_VAULT_NAME }}" \
-            --iam-role-arn "${{ secrets.BACKUP_IAM_ROLE_ARN }}" \
-            --region "${{ vars.AWS_REGION }}"
-      - name: Upload results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: restore-test-results
-          path: results/
+  terraform-deploy:
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: restore_testing/
+      Deploy: true
+      aws-region: eu-west-1
+      environment: restore_testing
+    secrets:
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}

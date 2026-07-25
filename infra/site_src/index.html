@@ -1,30 +1,589 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CraftHaven</title>
-  <style>
-    :root { color-scheme: light dark; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CraftHaven — Handmade goods from independent makers</title>
+<meta name="description" content="CraftHaven connects independent makers with people who care where things come from. Pottery, textiles, woodwork and jewellery, made by real hands.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ground: #e8e2d3;
+    --surface: #f2eee1;
+    --ink: #22281f;
+    --muted: #5b5a4e;
+    --accent: #a8701f;
+    --accent-strong: #7d5316;
+    --indigo: #3c5570;
+    --line: #d3cab2;
+    --stitch: #8a8168;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #171c15;
+      --surface: #1f251b;
+      --ink: #ece6d6;
+      --muted: #b7ae98;
+      --accent: #d59a3c;
+      --accent-strong: #eab15a;
+      --indigo: #85a5c2;
+      --line: #333a2c;
+      --stitch: #4c5342;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--ground);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  h1, h2, h3 { margin: 0; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+  a { color: inherit; }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .wrap { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+  .eyebrow {
+    display: block;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .stitch-rule { border: none; border-top: 1px dashed var(--stitch); margin: 0; }
+
+  /* header */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--ground) 90%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.1rem 1.5rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    flex: none;
+  }
+  .brand svg { flex: none; color: var(--accent); }
+  nav.links {
+    display: flex;
+    gap: 1.75rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  nav.links a { text-decoration: none; color: var(--muted); transition: color 0.15s ease; }
+  nav.links a:hover { color: var(--ink); }
+  .nav-actions { display: flex; align-items: center; gap: 1rem; flex: none; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.2rem;
+    border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .btn-primary { background: var(--accent); color: var(--ground); }
+  .btn-primary:hover { background: var(--accent-strong); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { border-color: var(--muted); }
+  #nav-toggle { display: none; }
+  .burger { display: none; }
+
+  /* hero */
+  .hero { padding: 4.5rem 1.5rem 4rem; }
+  .hero-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 3.5rem;
+    align-items: start;
+  }
+  .hero h1 {
+    font-size: clamp(2.1rem, 4.4vw, 3.1rem);
+    line-height: 1.12;
+    margin: 0.9rem 0 1.15rem;
+  }
+  .hero p { font-size: 1.08rem; color: var(--muted); max-width: 34rem; line-height: 1.6; margin: 0 0 2rem; }
+  .hero-actions { display: flex; gap: 0.9rem; flex-wrap: wrap; }
+
+  .manifest {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.6rem 1.7rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.85rem;
+  }
+  .manifest .manifest-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.1rem;
+  }
+  .manifest dl { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+  .manifest .row { display: flex; flex-direction: column; gap: 0.15rem; padding-bottom: 0.9rem; border-bottom: 1px dashed var(--line); }
+  .manifest .row:last-child { border-bottom: none; padding-bottom: 0; }
+  .manifest dt { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .manifest dd { margin: 0; color: var(--ink); font-weight: 600; }
+
+  /* sections */
+  section { padding: 4rem 1.5rem; }
+  .section-head { max-width: 34rem; margin: 0 0 2.75rem; }
+  .section-head h2 { font-size: clamp(1.5rem, 2.8vw, 1.9rem); margin: 0.6rem 0 0.7rem; }
+  .section-head p { color: var(--muted); line-height: 1.6; margin: 0; }
+
+  /* shop grid */
+  .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1.75rem; }
+  .shop-card { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); }
+  .shop-card figure {
+    margin: 0;
+    aspect-ratio: 4 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    border-bottom: 1px dashed var(--stitch);
+  }
+  .shop-card.indigo figure { background: color-mix(in srgb, var(--indigo) 14%, var(--surface)); }
+  .shop-card figure svg { width: 58%; height: 58%; color: var(--ink); }
+  .shop-card .shop-body { padding: 1.3rem 1.4rem 1.5rem; }
+  .shop-card .shop-num {
+    display: block;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 0.45rem;
+  }
+  .shop-card.indigo .shop-num { color: var(--indigo); }
+  .shop-card h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+  .shop-card p { color: var(--muted); font-size: 0.94rem; line-height: 1.55; margin: 0; }
+
+  /* values */
+  .values { background: var(--surface); }
+  .values-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 2rem; }
+  .value-item { border-left: 2px solid var(--accent); padding-left: 1.1rem; }
+  .value-item h3 { font-size: 1rem; margin-bottom: 0.4rem; }
+  .value-item p { color: var(--muted); font-size: 0.92rem; line-height: 1.55; margin: 0; }
+
+  /* about */
+  .about-inner {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 3rem;
+    align-items: center;
+    max-width: 62rem;
+    margin: 0 auto;
+  }
+  .about-inner p { color: var(--muted); line-height: 1.7; margin: 0 0 1.2rem; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .stats .stat { text-align: center; padding: 1.5rem 0.5rem; background: var(--surface); }
+  .stats .stat strong {
+    display: block;
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .stats .stat span { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+
+  /* waitlist band */
+  .waitlist-band { background: var(--ink); color: var(--ground); border-top: 1px dashed var(--stitch); border-bottom: 1px dashed var(--stitch); }
+  .waitlist-inner { max-width: 40rem; margin: 0 auto; text-align: center; padding: 4.5rem 1.5rem; }
+  .waitlist-band h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: 0.7rem; }
+  .waitlist-band > .waitlist-inner > p { color: color-mix(in srgb, var(--ground) 72%, transparent); max-width: 30rem; margin: 0 auto 2rem; line-height: 1.6; }
+  form.signup { display: flex; gap: 0.65rem; max-width: 27rem; margin: 0 auto; flex-wrap: wrap; justify-content: center; }
+  form.signup input[type="email"] {
+    flex: 1 1 14rem;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    border: 1px solid color-mix(in srgb, var(--ground) 30%, transparent);
+    background: color-mix(in srgb, var(--ground) 8%, transparent);
+    color: var(--ground);
+    font-size: 0.95rem;
+  }
+  form.signup input[type="email"]::placeholder { color: color-mix(in srgb, var(--ground) 55%, transparent); }
+  form.signup button {
+    background: var(--accent);
+    color: var(--ink);
+    border: none;
+    padding: 0.75rem 1.4rem;
+    border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-weight: 700;
+    font-size: 0.76rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  form.signup button:hover { background: var(--accent-strong); }
+  .form-note { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 0.78rem; margin-top: 1.1rem; color: color-mix(in srgb, var(--ground) 60%, transparent); }
+  .form-note.success { color: #b6d6a8; }
+
+  /* footer */
+  footer { padding: 3.5rem 1.5rem 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 2.5rem; margin-bottom: 2.5rem; }
+  .footer-brand p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; max-width: 20rem; margin: 0.9rem 0 0; }
+  footer h4 { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; color: var(--muted); }
+  footer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  footer ul a { text-decoration: none; color: var(--ink); font-size: 0.92rem; }
+  footer ul a:hover { color: var(--accent); }
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-top: 1.75rem;
+    border-top: 1px dashed var(--stitch);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .social { display: flex; gap: 0.75rem; }
+  .social a {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .social a:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .about-inner { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    nav.links { display: none; }
+    .burger {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #faf6f1;
-      color: #2b2320;
-      text-align: center;
-      padding: 2rem;
+      width: 2.3rem;
+      height: 2.3rem;
+      border-radius: 4px;
+      border: 1px solid var(--line);
+      background: transparent;
+      cursor: pointer;
+      color: var(--ink);
     }
-    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    p { font-size: 1.1rem; color: #6b5f56; max-width: 32rem; }
-  </style>
+    #nav-toggle:checked ~ nav.links {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--ground);
+      border-bottom: 1px solid var(--line);
+      padding: 0.5rem 1.5rem 1.25rem;
+    }
+    #nav-toggle:checked ~ nav.links a { padding: 0.75rem 0; border-bottom: 1px dashed var(--line); }
+    .stats { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+</style>
 </head>
 <body>
-  <h1>CraftHaven</h1>
-  <p>Handmade goods from independent makers. Our storefront is being prepared &mdash; check back soon.</p>
+
+<header>
+  <div class="nav-row wrap" style="position:relative;">
+    <a class="brand" href="#top">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1.5" y="1.5" width="23" height="23" rx="3" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M7 7 L19 19 M19 7 L7 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      CraftHaven
+    </a>
+
+    <input type="checkbox" id="nav-toggle">
+    <nav class="links">
+      <a href="#shop">Shop</a>
+      <a href="#about">About</a>
+      <a href="#values">Our promise</a>
+      <a href="#waitlist">Contact</a>
+    </nav>
+
+    <div class="nav-actions">
+      <a class="btn btn-primary" href="#waitlist">Get early access</a>
+      <label class="burger" for="nav-toggle" aria-label="Toggle menu">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M2 5H16M2 9H16M2 13H16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </label>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <span class="eyebrow">Opening this fall</span>
+        <h1>Handmade goods, from hands you can name.</h1>
+        <p>CraftHaven connects independent makers with people who care where things come from. Every piece is made — not manufactured — by a real person, in a real workshop.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#waitlist">Get early access</a>
+          <a class="btn btn-ghost" href="#about">Meet the makers</a>
+        </div>
+      </div>
+      <div class="manifest">
+        <div class="manifest-title">Maker's manifest</div>
+        <dl>
+          <div class="row"><dt>Materials</dt><dd>Stoneware · Oak · Wool · Brass</dd></div>
+          <div class="row"><dt>Makers onboard</dt><dd>120+ independent workshops</dd></div>
+          <div class="row"><dt>Fulfilment</dt><dd>Shipped direct from the workshop</dd></div>
+          <div class="row"><dt>Fees</dt><dd>Flat &amp; published, no hidden markup</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <hr class="stitch-rule">
+
+  <section id="shop">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Catalog · 4 categories</span>
+        <h2>Shop by category</h2>
+        <p>We're onboarding makers across four categories ahead of launch. Join the waitlist to shop the first drop.</p>
+      </div>
+      <div class="shop-grid">
+        <div class="shop-card">
+          <figure>
+            <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
+              <path d="M40 20 Q40 14 50 14 Q60 14 60 20 L58 34 Q72 46 68 62 Q65 78 50 80 Q35 78 32 62 Q28 46 42 34 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+              <path d="M32 55 H68" stroke="var(--accent)" stroke-width="3"/>
+              <ellipse cx="50" cy="80" rx="14" ry="3" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </figure>
+          <div class="shop-body">
+            <span class="shop-num">01 · Pottery</span>
+            <h3>Pottery &amp; Ceramics</h3>
+            <p>Wheel-thrown mugs, bowls and vases, each one glazed and fired by hand.</p>
+          </div>
+        </div>
+        <div class="shop-card indigo">
+          <figure>
+            <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
+              <circle cx="45" cy="55" r="22" stroke="currentColor" stroke-width="2.2"/>
+              <path d="M28 45 Q45 35 62 45" stroke="var(--indigo)" stroke-width="2"/>
+              <path d="M25 58 Q45 68 65 58" stroke="var(--indigo)" stroke-width="2"/>
+              <path d="M30 68 Q45 78 60 68" stroke="var(--indigo)" stroke-width="2"/>
+              <path d="M60 30 L82 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M68 38 L88 22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </figure>
+          <div class="shop-body">
+            <span class="shop-num">02 · Textiles</span>
+            <h3>Textiles &amp; Fibre Art</h3>
+            <p>Woven throws, hand-knit accessories and naturally dyed fabric.</p>
+          </div>
+        </div>
+        <div class="shop-card">
+          <figure>
+            <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
+              <rect x="22" y="30" width="56" height="14" rx="2" stroke="currentColor" stroke-width="2.2"/>
+              <path d="M30 44 L24 82" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M70 44 L76 82" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M40 44 L38 82" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M60 44 L62 82" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M30 37 Q50 33 70 37" stroke="var(--accent)" stroke-width="1.6"/>
+            </svg>
+          </figure>
+          <div class="shop-body">
+            <span class="shop-num">03 · Woodwork</span>
+            <h3>Woodwork &amp; Furniture</h3>
+            <p>Small-batch furniture and homeware, shaped from sustainably sourced timber.</p>
+          </div>
+        </div>
+        <div class="shop-card">
+          <figure>
+            <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
+              <circle cx="50" cy="62" r="20" stroke="currentColor" stroke-width="2.4"/>
+              <path d="M38 40 L50 20 L62 40 L54 46 H46 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="color-mix(in srgb, var(--accent) 35%, transparent)"/>
+              <path d="M50 20 L46 40 M50 20 L54 40" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+          </figure>
+          <div class="shop-body">
+            <span class="shop-num">04 · Jewellery</span>
+            <h3>Jewellery &amp; Metalwork</h3>
+            <p>Cast, forged and hand-set pieces made in small studios, not factories.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="values" id="values">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Our promise</span>
+        <h2>Why CraftHaven</h2>
+      </div>
+      <div class="values-grid">
+        <div class="value-item">
+          <h3>Handmade, always</h3>
+          <p>No mass production. Every listing is made to order or in small, numbered batches.</p>
+        </div>
+        <div class="value-item">
+          <h3>Independent makers</h3>
+          <p>Makers keep the majority of every sale — CraftHaven takes a small, transparent fee.</p>
+        </div>
+        <div class="value-item">
+          <h3>Fair, transparent pricing</h3>
+          <p>You see what the maker earns. No hidden markups between the workshop and your door.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="stitch-rule">
+
+  <section id="about">
+    <div class="wrap about-inner">
+      <div>
+        <span class="eyebrow">About us</span>
+        <h2 style="font-size:clamp(1.5rem,2.8vw,1.9rem);margin:0.6rem 0 1.1rem;">Built for makers who got tired of marketplaces built for everyone else</h2>
+        <p>CraftHaven started among three friends who make and sell their own work — pottery, woodwork and textiles. We were frustrated by fees that ate into every sale and storefronts that made handmade goods look identical to anything else online.</p>
+        <p>So we're building something smaller and more deliberate: a storefront that gives independent makers room to tell the story behind what they make, and gives buyers confidence that a real person made it.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong>120+</strong><span>Makers signed up</span></div>
+        <div class="stat"><strong>18</strong><span>Countries</span></div>
+        <div class="stat"><strong>100%</strong><span>Handmade</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="waitlist-band" id="waitlist">
+    <div class="waitlist-inner">
+      <span class="eyebrow" style="color:color-mix(in srgb, var(--ground) 70%, transparent);">Early access</span>
+      <h2>Get early access</h2>
+      <p>Join the waitlist to shop the first drop before we open to the public, and hear from makers as they join CraftHaven.</p>
+      <form class="signup" id="signup-form">
+        <input type="email" id="signup-email" placeholder="you@example.com" required aria-label="Email address">
+        <button type="submit">Join waitlist</button>
+      </form>
+      <p class="form-note" id="signup-note">Questions? hello@crafthavens.com</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="#top">
+          <svg width="24" height="24" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1.5" y="1.5" width="23" height="23" rx="3" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7 7 L19 19 M19 7 L7 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          CraftHaven
+        </a>
+        <p>Handmade goods from independent makers. Made by hand, sold direct, delivered with the story behind it.</p>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#shop">Pottery &amp; Ceramics</a></li>
+          <li><a href="#shop">Textiles &amp; Fibre Art</a></li>
+          <li><a href="#shop">Woodwork &amp; Furniture</a></li>
+          <li><a href="#shop">Jewellery &amp; Metalwork</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#about">About us</a></li>
+          <li><a href="#values">Our promise</a></li>
+          <li><a href="#waitlist">Careers</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#waitlist">Contact</a></li>
+          <li><a href="#waitlist">FAQs</a></li>
+          <li><a href="#waitlist">Shipping &amp; returns</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 CraftHaven. All rights reserved.</span>
+      <div class="social">
+        <a href="#" aria-label="Instagram"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor"/></svg></a>
+        <a href="#" aria-label="Pinterest"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M9 17c1-3 1.5-6 2-8.5.3-1.5 2.5-1.5 3-.3.4 1-.2 2.6-.6 3.8-.3 1 .5 1.8 1.5 1.5 1.6-.5 2.4-2.4 2.1-4.2-.4-2.3-2.7-3.6-5-3.3-2.7.4-4.2 2.9-3.6 5.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
+        <a href="#" aria-label="X"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 4l16 16M20 4L4 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('signup-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var note = document.getElementById('signup-note');
+    var email = document.getElementById('signup-email').value;
+    note.textContent = "Thanks — we'll email " + email + " when CraftHaven opens.";
+    note.classList.add('success');
+    this.reset();
+  });
+  document.querySelectorAll('nav.links a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      document.getElementById('nav-toggle').checked = false;
+    });
+  });
+</script>
+
 </body>
 </html>

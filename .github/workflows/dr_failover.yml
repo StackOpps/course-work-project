@@ -1,13 +1,13 @@
 name: "DR Failover"
 
 # Started by EventBridge (via an API destination calling this repo's
-# repository_dispatch API) once the composite alarm confirms a sustained
-# failure, or when AWS Health reports a region/service incident — Section
+# repository_dispatch API) once the Route 53 health check (backup/) confirms
+# the storefront has been unreachable for three consecutive checks — Section
 # 3.3: "No human has to notice the outage first." workflow_dispatch is kept
 # only as a manual escape hatch for testing this path directly.
 on:
   repository_dispatch:
-    types: [dr-composite-alarm, dr-aws-health]
+    types: [dr-route53-health-check]
   workflow_dispatch: {}
 
 permissions:
@@ -17,7 +17,7 @@ permissions:
 jobs:
   failover:
     runs-on: ubuntu-latest
-    environment: production
+    environment: development
     defaults:
       run:
         working-directory: infra
@@ -60,9 +60,6 @@ jobs:
           TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
           TF_VAR_route53_zone_name: ${{ vars.ROUTE53_ZONE_NAME }}
           TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
-          TF_VAR_github_owner: ${{ vars.GITHUB_OWNER }}
-          TF_VAR_github_repo: ${{ vars.GITHUB_REPO }}
-          TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
 
       - name: Read DR load balancer address
         id: dr_alb

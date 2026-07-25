@@ -18,7 +18,7 @@ on:
       aws-region:
         description: "Overrides TF_VAR_aws-region for this run, e.g. to re-Deploy infra/ against the DR region during a failover"
         type: string
-        default: "eu-west-1"
+        default: "eu-west-2"
       environment:
         description: "GitHub environment to run the job under (optional)"
         type: string
@@ -37,7 +37,7 @@ on:
         description: "RDS master password (infra/ only; ignored by stacks with no db_password variable)"
         required: false
       TF_VAR_GITHUB_PAT:
-        description: "GitHub PAT EventBridge uses to call repository_dispatch (infra/ only)"
+        description: "GitHub PAT EventBridge uses to call repository_dispatch (backup/ only)"
         required: false
 
 permissions:
@@ -86,6 +86,8 @@ jobs:
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
+          TF_VAR_github_owner: ${{ vars.GITHUB_OWNER }}
+          TF_VAR_github_repo: ${{ vars.GITHUB_REPO }}
           TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
           TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
 
@@ -98,6 +100,9 @@ jobs:
         run: terraform destroy -auto-approve
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
+          TF_VAR_github_owner: ${{ vars.GITHUB_OWNER }}
+          TF_VAR_github_repo: ${{ vars.GITHUB_REPO }}
           TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
           TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
 
