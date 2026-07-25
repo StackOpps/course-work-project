@@ -1,8 +1,18 @@
 
 locals {
   name = "${var.project_name}-${var.environment}"
+  backup_polic_arns = [
+    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForBackup",
+    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForRestores",
+    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
+  ]
 }
+data "aws_iam_policy" "BackupPolicy" {
+  provider = aws.primary
+  for_each = toset(local.backup_polic_arns)
+  arn      = each.value
 
+}
 resource "aws_backup_vault" "dr" {
   provider = aws.dr
   name     = "${local.name}-dr-vault"
@@ -47,33 +57,14 @@ resource "aws_iam_role" "backup" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "backup" {
+resource "aws_iam_role_policy_attachment" "" {
+  for_each = data.aws_iam_policy.BackupPolicy
   provider = aws.primary
 
   role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForBackup"
+  policy_arn = each.value.arn
 }
 
-resource "aws_iam_role_policy_attachment" "restore" {
-  provider = aws.primary
-
-  role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForRestores"
-}
-
-resource "aws_iam_role_policy_attachment" "s3_backup" {
-  provider = aws.primary
-
-  role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
-}
-
-resource "aws_iam_role_policy_attachment" "s3_restore" {
-  provider = aws.primary
-
-  role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
-}
 
 resource "aws_backup_plan" "main" {
   provider = aws.primary
