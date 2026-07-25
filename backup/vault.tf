@@ -51,28 +51,28 @@ resource "aws_iam_role_policy_attachment" "backup" {
   provider = aws.primary
 
   role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForBackup"
 }
 
 resource "aws_iam_role_policy_attachment" "restore" {
   provider = aws.primary
 
   role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
+  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForRestores"
 }
 
 resource "aws_iam_role_policy_attachment" "s3_backup" {
   provider = aws.primary
 
   role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForS3Backup"
+  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
 }
 
 resource "aws_iam_role_policy_attachment" "s3_restore" {
   provider = aws.primary
 
   role       = aws_iam_role.backup.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForS3Restore"
+  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
 }
 
 resource "aws_backup_plan" "main" {
