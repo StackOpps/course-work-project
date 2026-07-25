@@ -72,7 +72,7 @@ resource "aws_backup_plan" "main" {
   name = "${local.name}-backup-plan"
 
   rule {
-    rule_name         = "daily"
+    rule_name         = "hourly"
     target_vault_name = aws_backup_vault.primary.name
     schedule          = var.backup_schedule_cron
     start_window      = 60
