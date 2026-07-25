@@ -57,7 +57,7 @@ resource "aws_iam_role" "backup" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "" {
+resource "aws_iam_role_policy_attachment" "backup_policy_attachment" {
   for_each = data.aws_iam_policy.backup_policy
   provider = aws.primary
 
