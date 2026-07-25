@@ -19,7 +19,7 @@ variable "aws_region" {
 variable "schedule_expression" {
   description = "Cron expression (AWS Backup format) for how often restore testing runs"
   type        = string
-  default     = "cron(0 5 ? * MON *)"
+  default     = "cron(0 1/2 * * * *)"
 }
 
 variable "start_window_hours" {
