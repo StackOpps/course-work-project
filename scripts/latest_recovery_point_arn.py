@@ -21,6 +21,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resource-arn", required=True)
     parser.add_argument("--region", default=None)
+    parser.add_argument(
+        "--field",
+        choices=["arn", "created-at"],
+        default="arn",
+        help="Print the recovery point's ARN (default) or its CreationDate, e.g. for RPO calculation",
+    )
     args = parser.parse_args()
 
     recovery_point = latest_recovery_point(args.resource_arn, args.region)
@@ -28,7 +34,10 @@ def main() -> int:
         print(f"No recovery points found for {args.resource_arn}", file=sys.stderr)
         return 1
 
-    print(recovery_point["RecoveryPointArn"])
+    if args.field == "arn":
+        print(recovery_point["RecoveryPointArn"])
+    else:
+        print(recovery_point["CreationDate"].isoformat())
     return 0
 
 

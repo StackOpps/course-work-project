@@ -34,8 +34,19 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
     outputs:
       snapshot_arn: ${{ steps.lookup.outputs.snapshot_arn }}
+      snapshot_created_at: ${{ steps.lookup.outputs.snapshot_created_at }}
+      failure_triggered_at: ${{ steps.trigger_time.outputs.failure_triggered_at }}
     steps:
       - uses: actions/checkout@v4
+
+      # Closest available proxy for "the composite/health-check alarm fired"
+      # (Section 3.4's RTO start point): repository_dispatch -> job start is a
+      # few seconds at most, so this is timed at the earliest point this
+      # workflow can observe rather than at EventBridge's own alarm timestamp,
+      # which isn't threaded through the API destination payload today.
+      - name: Record when this drill started
+        id: trigger_time
+        run: echo "failure_triggered_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Find latest RDS recovery point in the DR vault
         id: lookup
@@ -44,6 +55,10 @@ jobs:
             --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
             --region "${{ vars.DR_REGION }}")
           echo "snapshot_arn=$arn" >> "$GITHUB_OUTPUT"
+          created_at=$(python scripts/latest_recovery_point_arn.py \
+            --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
+            --region "${{ vars.DR_REGION }}" --field created-at)
+          echo "snapshot_created_at=$created_at" >> "$GITHUB_OUTPUT"
 
   # Re-applies the same infra/ configuration infra rebuilds the primary
   # region from, but against var.dr_region and a state key of its own so it
@@ -67,13 +82,17 @@ jobs:
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
 
   failover:
-    needs: provision
+    needs: [provision, find-latest-recovery-point]
     runs-on: ubuntu-latest
     environment: development
+    permissions:
+      contents: write
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Smoke check the DR environment
         run: |
           curl --fail --retry 10 --retry-delay 15 --retry-connrefused \
@@ -101,3 +120,26 @@ jobs:
                 }
               }]
             }'
+
+      # Turns this drill into a permanent, plottable record (Section 3.4's
+      # RTO/RPO evaluation) instead of a number that only ever existed in this
+      # run's logs. docs/data/history.json is served by GitHub Pages
+      # (docs/index.html), so every automated failover — and every manual
+      # workflow_dispatch drill — adds one point to that dashboard.
+      - name: Record this drill's RTO/RPO
+        run: |
+          python scripts/record_dr_result.py \
+            --resource-type ENV \
+            --resource-id "${{ vars.APP_DOMAIN_NAME }}" \
+            --failure-triggered-at "${{ needs.find-latest-recovery-point.outputs.failure_triggered_at }}" \
+            --recovery-point-created-at "${{ needs.find-latest-recovery-point.outputs.snapshot_created_at }}" \
+            --notes "Automated DR failover (event: ${{ github.event.action || 'workflow_dispatch' }})"
+
+      - name: Publish result to the dashboard
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/history.json
+          git commit -m "Record DR failover drill result [skip ci]"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"

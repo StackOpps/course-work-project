@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CraftHaven — DR Recovery Metrics</title>
+<meta name="description" content="Live RTO/RPO history from CraftHaven's automated disaster-recovery drills." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%9F%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    color-scheme: light;
+    --page:            #f9f9f7;
+    --surface-1:       #fcfcfb;
+    --text-primary:    #0b0b0b;
+    --text-secondary:  #52514e;
+    --text-muted:      #898781;
+    --gridline:        #e1e0d9;
+    --baseline:        #c3c2b7;
+    --border:          rgba(11,11,11,0.10);
+    --series-rto:      #2a78d6;
+    --series-rpo:      #008300;
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-critical: #d03b3b;
+    --success-text:    #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:            #0d0d0d;
+      --surface-1:       #1a1a19;
+      --text-primary:    #ffffff;
+      --text-secondary:  #c3c2b7;
+      --text-muted:      #898781;
+      --gridline:        #2c2c2a;
+      --baseline:        #383835;
+      --border:          rgba(255,255,255,0.10);
+      --series-rto:      #3987e5;
+      --series-rpo:      #008300;
+      --status-good:     #0ca30c;
+      --status-warning:  #fab219;
+      --status-critical: #d03b3b;
+      --success-text:    #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:            #0d0d0d;
+    --surface-1:       #1a1a19;
+    --text-primary:    #ffffff;
+    --text-secondary:  #c3c2b7;
+    --text-muted:      #898781;
+    --gridline:        #2c2c2a;
+    --baseline:        #383835;
+    --border:          rgba(255,255,255,0.10);
+    --series-rto:      #3987e5;
+    --series-rpo:      #008300;
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-critical: #d03b3b;
+    --success-text:    #0ca30c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  header p {
+    color: var(--text-secondary);
+    margin: 0 0 28px;
+    max-width: 62ch;
+    line-height: 1.5;
+  }
+  header p a { color: inherit; }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .tile .label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0 0 6px;
+  }
+  .tile .value {
+    font-size: 1.7rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .tile .status-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  figure {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 0 0 16px;
+    padding: 18px 18px 8px;
+  }
+  figure figcaption {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  figure .subcaption {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .chart-scroll { overflow-x: auto; }
+  svg.chart { display: block; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .baseline { stroke: var(--baseline); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 10px; }
+  .end-label { fill: var(--text-primary); font-size: 11px; font-weight: 600; }
+  .point-ring { stroke: var(--surface-1); stroke-width: 2; }
+
+  .empty-state {
+    background: var(--surface-1);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .empty-state code {
+    background: var(--gridline);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.9em;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  td.num { font-variant-numeric: tabular-nums; }
+  td.notes { white-space: normal; color: var(--text-secondary); }
+  .table-scroll { overflow-x: auto; }
+
+  footer {
+    margin-top: 32px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>CraftHaven — Disaster Recovery Metrics</h1>
+    <p>
+      RTO/RPO history recorded automatically by
+      <code>dr_failover.yml</code> on every automated (Route 53 health check)
+      and manual failover drill — see Dissertation §3.4 for how these map to
+      the evaluation criteria.
+    </p>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <div id="empty" class="empty-state" hidden>
+    No drills recorded yet. Trigger <code>dr_failover.yml</code> (automatically
+    via the Route&nbsp;53 health check, or manually through its
+    <code>workflow_dispatch</code> escape hatch) to record the first one — this
+    page updates itself on the next push to <code>docs/data/history.json</code>.
+  </div>
+
+  <div id="charts" hidden>
+    <figure>
+      <figcaption>Recovery Time Objective (RTO)</figcaption>
+      <div class="subcaption">Composite alarm / drill start &rarr; customers redirected to the recovered site</div>
+      <div class="chart-scroll"><svg class="chart" id="chart-rto"></svg></div>
+    </figure>
+    <figure>
+      <figcaption>Recovery Point Objective (RPO)</figcaption>
+      <div class="subcaption">Age of the recovery point restored from, at the moment failure was detected</div>
+      <div class="chart-scroll"><svg class="chart" id="chart-rpo"></svg></div>
+    </figure>
+  </div>
+
+  <div id="table-wrap" hidden>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Triggered</th>
+            <th>Resource</th>
+            <th>RTO</th>
+            <th>RPO</th>
+            <th>Result</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    Generated from <code>docs/data/history.json</code>, appended to by the
+    <code>failover</code> job in
+    <a href="https://github.com/search?q=repo:crafthaven+dr_failover.yml" rel="noopener">dr_failover.yml</a>.
+    Part of the implementation supporting <em>Evaluating Cost-Effective
+    Disaster Recovery and Backup Strategies for Small Companies Using AWS
+    Cloud Infrastructure</em>.
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function formatDuration(seconds) {
+    if (seconds === null || seconds === undefined) return "—";
+    seconds = Math.round(seconds);
+    if (seconds < 60) return seconds + "s";
+    const m = Math.floor(seconds / 60), s = seconds % 60;
+    if (seconds < 3600) return m + "m" + (s ? " " + s + "s" : "");
+    const h = Math.floor(seconds / 3600), rm = Math.floor((seconds % 3600) / 60);
+    if (seconds < 86400) return h + "h" + (rm ? " " + rm + "m" : "");
+    const d = Math.floor(seconds / 86400), rh = Math.floor((seconds % 86400) / 3600);
+    return d + "d" + (rh ? " " + rh + "h" : "");
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+
+  function niceMax(value) {
+    if (value <= 0) return 1;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+    const residual = value / magnitude;
+    let step;
+    if (residual <= 1) step = 1;
+    else if (residual <= 2) step = 2;
+    else if (residual <= 5) step = 5;
+    else step = 10;
+    return step * magnitude;
+  }
+
+  function buildLineChart(svgEl, points, color) {
+    // points: [{x: Date, y: number|null, label: string}]
+    const width = Math.max(360, points.length * 64 + 80);
+    const height = 200;
+    const padL = 46, padR = 20, padT = 16, padB = 34;
+    const plotW = width - padL - padR;
+    const plotH = height - padT - padB;
+
+    svgEl.setAttribute("viewBox", "0 0 " + width + " " + height);
+    svgEl.setAttribute("width", width);
+    svgEl.setAttribute("height", height);
+    svgEl.innerHTML = "";
+
+    const known = points.filter(function (p) { return p.y !== null; });
+    const maxY = niceMax(Math.max.apply(null, known.map(function (p) { return p.y; }).concat([0])) * 1.15 || 1);
+    const ticks = 4;
+
+    function xAt(i) {
+      return points.length === 1
+        ? padL + plotW / 2
+        : padL + (i / (points.length - 1)) * plotW;
+    }
+    function yAt(v) {
+      return padT + plotH - (v / maxY) * plotH;
+    }
+
+    const ns = "http://www.w3.org/2000/svg";
+    function el(tag, attrs) {
+      const e = document.createElementNS(ns, tag);
+      for (const k in attrs) e.setAttribute(k, attrs[k]);
+      return e;
+    }
+
+    // gridlines + y ticks
+    for (let t = 0; t <= ticks; t++) {
+      const v = (maxY / ticks) * t;
+      const y = yAt(v);
+      svgEl.appendChild(el("line", { x1: padL, x2: width - padR, y1: y, y2: y, class: "gridline" }));
+      const label = el("text", { x: padL - 8, y: y + 3, class: "axis-label", "text-anchor": "end" });
+      label.textContent = formatDuration(v);
+      svgEl.appendChild(label);
+    }
+    svgEl.appendChild(el("line", { x1: padL, x2: width - padR, y1: padT + plotH, y2: padT + plotH, class: "baseline" }));
+
+    // x labels
+    points.forEach(function (p, i) {
+      const label = el("text", { x: xAt(i), y: height - 10, class: "axis-label", "text-anchor": "middle" });
+      label.textContent = p.label;
+      svgEl.appendChild(label);
+    });
+
+    // line through known points
+    let d = "";
+    known.forEach(function (p) {
+      const i = points.indexOf(p);
+      d += (d ? "L" : "M") + xAt(i) + "," + yAt(p.y) + " ";
+    });
+    if (d) svgEl.appendChild(el("path", { d: d, fill: "none", stroke: color, "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+
+    // markers
+    known.forEach(function (p) {
+      const i = points.indexOf(p);
+      const g = el("g", {});
+      const ring = el("circle", { cx: xAt(i), cy: yAt(p.y), r: 6, fill: color, class: "point-ring" });
+      const title = el("title", {});
+      title.textContent = p.label + " — " + formatDuration(p.y);
+      ring.appendChild(title);
+      g.appendChild(ring);
+      svgEl.appendChild(g);
+    });
+
+    // direct end label on the last known point
+    if (known.length) {
+      const last = known[known.length - 1];
+      const i = points.indexOf(last);
+      const label = el("text", { x: xAt(i) + 10, y: yAt(last.y) - 8, class: "end-label" });
+      label.textContent = formatDuration(last.y);
+      svgEl.appendChild(label);
+    }
+  }
+
+  fetch("data/history.json")
+    .then(function (r) { return r.json(); })
+    .then(function (history) {
+      if (!Array.isArray(history) || history.length === 0) {
+        document.getElementById("empty").hidden = false;
+        return;
+      }
+
+      history.sort(function (a, b) { return new Date(a.failure_triggered_at) - new Date(b.failure_triggered_at); });
+
+      const total = history.length;
+      const successes = history.filter(function (r) { return r.success; }).length;
+      const successRate = Math.round((successes / total) * 100);
+      const latest = history[history.length - 1];
+
+      const tiles = document.getElementById("tiles");
+      const statusColor = successRate === 100 ? css("--status-good") : successRate >= 50 ? css("--status-warning") : css("--status-critical");
+
+      function tile(label, value, statusRow) {
+        const t = document.createElement("div");
+        t.className = "tile";
+        t.innerHTML = '<p class="label">' + label + "</p>" +
+          '<p class="value">' + value + "</p>" +
+          (statusRow || "");
+        tiles.appendChild(t);
+      }
+      tile("Drills recorded", total);
+      tile(
+        "Restore success rate",
+        successRate + "%",
+        '<div class="status-row"><span class="status-dot" style="background:' + statusColor + '"></span>' +
+          '<span style="color:var(--text-secondary);font-size:0.78rem">' + successes + " of " + total + " succeeded</span></div>"
+      );
+      tile("Latest RTO", formatDuration(latest.rto_seconds));
+      tile("Latest RPO", formatDuration(latest.rpo_seconds));
+
+      document.getElementById("charts").hidden = false;
+      document.getElementById("table-wrap").hidden = false;
+
+      const rtoPoints = history.map(function (r) { return { y: r.rto_seconds, label: formatDate(r.failure_triggered_at) }; });
+      const rpoPoints = history.map(function (r) { return { y: r.rpo_seconds, label: formatDate(r.failure_triggered_at) }; });
+      buildLineChart(document.getElementById("chart-rto"), rtoPoints, css("--series-rto"));
+      buildLineChart(document.getElementById("chart-rpo"), rpoPoints, css("--series-rpo"));
+
+      const tbody = document.getElementById("table-body");
+      history.slice().reverse().forEach(function (r) {
+        const tr = document.createElement("tr");
+        const statusDot = r.success ? css("--status-good") : css("--status-critical");
+        tr.innerHTML =
+          "<td>" + new Date(r.failure_triggered_at).toLocaleString() + "</td>" +
+          "<td>" + r.resource_type + " &middot; " + r.resource_id + "</td>" +
+          '<td class="num">' + formatDuration(r.rto_seconds) + "</td>" +
+          '<td class="num">' + formatDuration(r.rpo_seconds) + "</td>" +
+          '<td><span class="status-dot" style="display:inline-block;background:' + statusDot + '"></span> ' + (r.success ? "Success" : "Failed") + "</td>" +
+          '<td class="notes">' + (r.notes || "") + "</td>";
+        tbody.appendChild(tr);
+      });
+    })
+    .catch(function () {
+      document.getElementById("empty").hidden = false;
+    });
+})();
+</script>
+</body>
+</html>
