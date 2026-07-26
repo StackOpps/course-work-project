@@ -1,4 +1,4 @@
-name: "Main Workflow"
+name: "Deployment"
 
 on:
   workflow_dispatch:
@@ -33,11 +33,11 @@ jobs:
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
 
-  terraform-deploy:
+  terraform-deploy-backup:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: backup/
-      deploy_backup: ${{inputs.Deploy-Backup}}
+      Deploy-Backup: ${{inputs.Deploy-Backup}}
       aws-region: eu-west-1
       environment: backup
     secrets:
@@ -48,7 +48,7 @@ jobs:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: restore_testing/
-      deploy_restore_testing: ${{inputs.Deploy-restore-testing}}
+      Deploy-restore-testing: ${{inputs.Deploy-restore-testing}}
       aws-region: eu-west-1
       environment: restore-testing
     secrets:
