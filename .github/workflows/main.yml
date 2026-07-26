@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
       inputs:
         Deploy-Infra:
-          description: "Whet  her to deploy the Terraform plan for infra/"
+          description: "Deploy the Terraform plan for infra/"
           required: true
           type: boolean
         Deploy-restore-testing: 
-          description: "Whether to deploy the Terraform plan for restore_testing/"
+          description: "Deploy the Terraform plan for restore_testing/"
           required: true
           type: boolean
         Deploy-Backup:
-          description: "Whether to deploy the Terraform plan for backup/"
+          description: "Deploy the Terraform plan for backup/"
           required: true
           type: boolean
  
