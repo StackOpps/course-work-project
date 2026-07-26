@@ -67,6 +67,9 @@ on:
       TF_VAR_GITHUB_PAT:
         description: "GitHub PAT EventBridge uses to call repository_dispatch (backup/ only)"
         required: false
+      TF_VAR_github_repo:
+        description: "GitHub repository name (backup/ only; ignored by stacks with no github_repo variable)"
+        required: false
 
 permissions:
   id-token: write
