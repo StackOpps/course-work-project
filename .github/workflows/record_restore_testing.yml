@@ -1,0 +1,44 @@
+name: "Record Restore Testing Results"
+
+# restore_testing/'s AWS Backup restore testing plan runs on its own
+# AWS-internal schedule (restore_testing/variables.tf's schedule_expression,
+# currently hourly - AWS Backup won't go more frequent than that). Nothing in
+# this repo triggers those runs, so this workflow just polls for newly
+# completed ones and folds them into the same dashboard dr_failover.yml
+# writes to, on its own independent schedule.
+on:
+  schedule:
+    - cron: '15 * * * *' # 15 minutes past every hour, clear of the :00 test runs
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    environment: restore_testing
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record any newly completed restore-testing jobs
+        run: |
+          python scripts/record_restore_testing_results.py \
+            --region eu-west-1 \
+            --vault-name crafthaven-dev-vault
+
+      - name: Publish to the dashboard if there's anything new
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- docs/data/history.json; then
+            echo "No new restore-testing results"
+            exit 0
+          fi
+          git add docs/data/history.json
+          git commit -m "Record restore-testing results [skip ci]"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"

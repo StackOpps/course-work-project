@@ -125,7 +125,7 @@ jobs:
           TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
 
       - name: Terraform Deploy
-        if: ${{ inputs.Deploy-Infra || inputs.Deploy-restore-testing || inputs.deploy_backup }}
+        if: ${{ inputs.Deploy-Infra || inputs.Deploy-restore-testing || inputs.Deploy-Backup }}
         run: terraform apply -auto-approve tfplan
 
       - name: Read Terraform outputs
