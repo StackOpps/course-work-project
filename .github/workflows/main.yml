@@ -25,9 +25,10 @@ permissions:
 jobs:
   terraform-deploy-infra:
     uses: ./.github/workflows/_terraform.yml
+    if: ${{ inputs.Deploy-Infra }}
     with:
       working-directory: infra/
-      Deploy-Infra: ${{inputs.Deploy-Infra}}
+      Deploy-Infra: true
       aws-region: eu-west-2
       environment: development
     secrets:
@@ -37,9 +38,10 @@ jobs:
 
   terraform-deploy-backup:
     uses: ./.github/workflows/_terraform.yml
+    if: ${{ inputs.Deploy-Backup }}
     with:
       working-directory: backup/
-      Deploy-Backup: ${{inputs.Deploy-Backup}}
+      Deploy-Backup: true
       aws-region: eu-west-1
       environment: backup
     secrets:
@@ -48,9 +50,10 @@ jobs:
 
   terraform-apply-Restore-Testing:
     uses: ./.github/workflows/_terraform.yml
+    if: ${{ inputs.Deploy-restore-testing }}
     with:
       working-directory: restore_testing/
-      Deploy-restore-testing: ${{inputs.Deploy-restore-testing}}
+      Deploy-restore-testing: true
       aws-region: eu-west-1
       environment: restore-testing
     secrets:
