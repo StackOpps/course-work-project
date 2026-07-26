@@ -47,6 +47,8 @@ jobs:
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+      TF_VAR_github_repo: course-work-project
+      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
 
   terraform-apply-Restore-Testing:
     uses: ./.github/workflows/_terraform.yml

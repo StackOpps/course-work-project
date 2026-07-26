@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>CraftHaven — DR Recovery Metrics</title>
-<meta name="description" content="Live RTO/RPO history from CraftHaven's automated disaster-recovery drills." />
+<meta name="description" content="Live RTO/RPO history from CraftHaven's automated disaster-recovery drills and AWS Backup restore tests." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%9F%3C/text%3E%3C/svg%3E" />
 <style>
   :root {
@@ -22,7 +22,6 @@
     --status-good:     #0ca30c;
     --status-warning:  #fab219;
     --status-critical: #d03b3b;
-    --success-text:    #006300;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -40,7 +39,6 @@
       --status-good:     #0ca30c;
       --status-warning:  #fab219;
       --status-critical: #d03b3b;
-      --success-text:    #0ca30c;
     }
   }
   :root[data-theme="dark"] {
@@ -58,7 +56,6 @@
     --status-good:     #0ca30c;
     --status-warning:  #fab219;
     --status-critical: #d03b3b;
-    --success-text:    #0ca30c;
   }
 
   * { box-sizing: border-box; }
@@ -82,16 +79,30 @@
   header p {
     color: var(--text-secondary);
     margin: 0 0 28px;
-    max-width: 62ch;
+    max-width: 66ch;
     line-height: 1.5;
   }
-  header p a { color: inherit; }
+  header p code { background: var(--gridline); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+
+  section.result-group { margin-bottom: 36px; }
+  section.result-group h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 2px;
+  }
+  section.result-group .section-sub {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0 0 14px;
+    max-width: 66ch;
+    line-height: 1.5;
+  }
 
   .tiles {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px;
-    margin-bottom: 28px;
+    margin-bottom: 16px;
   }
   .tile {
     background: var(--surface-1);
@@ -120,13 +131,19 @@
     height: 10px;
     border-radius: 50%;
     flex: none;
+    display: inline-block;
   }
 
+  .charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
   figure {
     background: var(--surface-1);
     border: 1px solid var(--border);
     border-radius: 10px;
-    margin: 0 0 16px;
+    margin: 0;
     padding: 18px 18px 8px;
   }
   figure figcaption {
@@ -152,10 +169,10 @@
     background: var(--surface-1);
     border: 1px dashed var(--border);
     border-radius: 10px;
-    padding: 32px 20px;
-    text-align: center;
+    padding: 24px 20px;
     color: var(--text-secondary);
     line-height: 1.6;
+    font-size: 0.9rem;
   }
   .empty-state code {
     background: var(--gridline);
@@ -164,6 +181,11 @@
     font-size: 0.9em;
   }
 
+  h3.table-heading {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
   table {
     width: 100%;
     border-collapse: collapse;
@@ -200,44 +222,82 @@
   <header>
     <h1>CraftHaven — Disaster Recovery Metrics</h1>
     <p>
-      RTO/RPO history recorded automatically by
-      <code>dr_failover.yml</code> on every automated (Route 53 health check)
-      and manual failover drill — see Dissertation §3.4 for how these map to
+      Two independent sources feed this page: full-environment failover
+      drills from <code>dr_failover.yml</code> (automated via the Route&nbsp;53
+      health check, or manual), and AWS Backup's own native restore-testing
+      plan (<code>restore_testing/</code>), polled in separately since it runs
+      on AWS's internal schedule. See Dissertation §3.4 for how these map to
       the evaluation criteria.
     </p>
   </header>
 
-  <section class="tiles" id="tiles"></section>
-
-  <div id="empty" class="empty-state" hidden>
-    No drills recorded yet. Trigger <code>dr_failover.yml</code> (automatically
-    via the Route&nbsp;53 health check, or manually through its
-    <code>workflow_dispatch</code> escape hatch) to record the first one — this
-    page updates itself on the next push to <code>docs/data/history.json</code>.
+  <div id="empty-all" class="empty-state" hidden>
+    No drills or restore tests recorded yet. Trigger <code>dr_failover.yml</code>
+    or wait for <code>restore_testing/</code>'s next scheduled run — this page
+    updates on the next push to <code>docs/data/history.json</code>.
   </div>
 
-  <div id="charts" hidden>
-    <figure>
-      <figcaption>Recovery Time Objective (RTO)</figcaption>
-      <div class="subcaption">Composite alarm / drill start &rarr; customers redirected to the recovered site</div>
-      <div class="chart-scroll"><svg class="chart" id="chart-rto"></svg></div>
-    </figure>
-    <figure>
-      <figcaption>Recovery Point Objective (RPO)</figcaption>
-      <div class="subcaption">Age of the recovery point restored from, at the moment failure was detected</div>
-      <div class="chart-scroll"><svg class="chart" id="chart-rpo"></svg></div>
-    </figure>
-  </div>
+  <section class="result-group" id="section-env">
+    <h2>Full DR Failover Drills</h2>
+    <p class="section-sub">Composite alarm / drill start &rarr; customers redirected to the recovered site.</p>
+    <div id="empty-env" class="empty-state" hidden>
+      None recorded yet — trigger <code>dr_failover.yml</code> (Route&nbsp;53 health check, or its <code>workflow_dispatch</code> escape hatch).
+    </div>
+    <div id="body-env" hidden>
+      <div class="tiles" id="tiles-env"></div>
+      <div class="charts-row">
+        <figure>
+          <figcaption>RTO</figcaption>
+          <div class="subcaption">Failure detected &rarr; site recovered</div>
+          <div class="chart-scroll"><svg class="chart" id="chart-rto-env"></svg></div>
+        </figure>
+        <figure>
+          <figcaption>RPO</figcaption>
+          <div class="subcaption">Age of the recovery point restored from</div>
+          <div class="chart-scroll"><svg class="chart" id="chart-rpo-env"></svg></div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="result-group" id="section-restore">
+    <h2>AWS Backup Restore Tests</h2>
+    <p class="section-sub">
+      Native AWS Backup restore-testing (<code>restore_testing/</code>) — single-resource
+      restores AWS runs and validates on its own hourly schedule, independent of any failure.
+    </p>
+    <div id="empty-restore" class="empty-state" hidden>
+      None recorded yet — <code>restore_testing/</code>'s plan hasn't completed a run,
+      or <code>record_restore_testing.yml</code> hasn't polled since it did.
+    </div>
+    <div id="body-restore" hidden>
+      <div class="tiles" id="tiles-restore"></div>
+      <div class="charts-row">
+        <figure>
+          <figcaption>Restore duration</figcaption>
+          <div class="subcaption">Restore job started &rarr; completed</div>
+          <div class="chart-scroll"><svg class="chart" id="chart-rto-restore"></svg></div>
+        </figure>
+        <figure>
+          <figcaption>Recovery point age</figcaption>
+          <div class="subcaption">How old the tested recovery point was when restored</div>
+          <div class="chart-scroll"><svg class="chart" id="chart-rpo-restore"></svg></div>
+        </figure>
+      </div>
+    </div>
+  </section>
 
   <div id="table-wrap" hidden>
+    <h3 class="table-heading">All results</h3>
     <div class="table-scroll">
       <table>
         <thead>
           <tr>
             <th>Triggered</th>
+            <th>Category</th>
             <th>Resource</th>
-            <th>RTO</th>
-            <th>RPO</th>
+            <th>Duration</th>
+            <th>Recovery-point age</th>
             <th>Result</th>
             <th>Notes</th>
           </tr>
@@ -249,11 +309,11 @@
 
   <footer>
     Generated from <code>docs/data/history.json</code>, appended to by the
-    <code>failover</code> job in
-    <a href="https://github.com/search?q=repo:crafthaven+dr_failover.yml" rel="noopener">dr_failover.yml</a>.
-    Part of the implementation supporting <em>Evaluating Cost-Effective
-    Disaster Recovery and Backup Strategies for Small Companies Using AWS
-    Cloud Infrastructure</em>.
+    <code>failover</code> job in <code>dr_failover.yml</code> and by the
+    scheduled <code>record_restore_testing.yml</code> poller. Part of the
+    implementation supporting <em>Evaluating Cost-Effective Disaster
+    Recovery and Backup Strategies for Small Companies Using AWS Cloud
+    Infrastructure</em>.
   </footer>
 </main>
 
@@ -278,8 +338,13 @@
   }
 
   function formatDate(iso) {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+
+  function categoryLabel(resourceType) {
+    if (resourceType === "ENV") return "Full failover";
+    const kind = resourceType.split(":")[1] || resourceType;
+    return "Restore test — " + kind;
   }
 
   function niceMax(value) {
@@ -295,8 +360,8 @@
   }
 
   function buildLineChart(svgEl, points, color) {
-    // points: [{x: Date, y: number|null, label: string}]
-    const width = Math.max(360, points.length * 64 + 80);
+    // points: [{y: number|null, label: string}]
+    const width = Math.max(320, points.length * 64 + 80);
     const height = 200;
     const padL = 46, padR = 20, padT = 16, padB = 34;
     const plotW = width - padL - padR;
@@ -312,9 +377,7 @@
     const ticks = 4;
 
     function xAt(i) {
-      return points.length === 1
-        ? padL + plotW / 2
-        : padL + (i / (points.length - 1)) * plotW;
+      return points.length === 1 ? padL + plotW / 2 : padL + (i / (points.length - 1)) * plotW;
     }
     function yAt(v) {
       return padT + plotH - (v / maxY) * plotH;
@@ -327,7 +390,6 @@
       return e;
     }
 
-    // gridlines + y ticks
     for (let t = 0; t <= ticks; t++) {
       const v = (maxY / ticks) * t;
       const y = yAt(v);
@@ -338,14 +400,12 @@
     }
     svgEl.appendChild(el("line", { x1: padL, x2: width - padR, y1: padT + plotH, y2: padT + plotH, class: "baseline" }));
 
-    // x labels
     points.forEach(function (p, i) {
       const label = el("text", { x: xAt(i), y: height - 10, class: "axis-label", "text-anchor": "middle" });
       label.textContent = p.label;
       svgEl.appendChild(label);
     });
 
-    // line through known points
     let d = "";
     known.forEach(function (p) {
       const i = points.indexOf(p);
@@ -353,19 +413,15 @@
     });
     if (d) svgEl.appendChild(el("path", { d: d, fill: "none", stroke: color, "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" }));
 
-    // markers
     known.forEach(function (p) {
       const i = points.indexOf(p);
-      const g = el("g", {});
       const ring = el("circle", { cx: xAt(i), cy: yAt(p.y), r: 6, fill: color, class: "point-ring" });
       const title = el("title", {});
       title.textContent = p.label + " — " + formatDuration(p.y);
       ring.appendChild(title);
-      g.appendChild(ring);
-      svgEl.appendChild(g);
+      svgEl.appendChild(ring);
     });
 
-    // direct end label on the last known point
     if (known.length) {
       const last = known[known.length - 1];
       const i = points.indexOf(last);
@@ -375,66 +431,96 @@
     }
   }
 
+  function tile(container, label, value, statusRow) {
+    const t = document.createElement("div");
+    t.className = "tile";
+    t.innerHTML = '<p class="label">' + label + "</p>" +
+      '<p class="value">' + value + "</p>" +
+      (statusRow || "");
+    container.appendChild(t);
+  }
+
+  function renderSection(records, ids, countLabel) {
+    const emptyEl = document.getElementById(ids.empty);
+    const bodyEl = document.getElementById(ids.body);
+    if (records.length === 0) {
+      emptyEl.hidden = false;
+      bodyEl.hidden = true;
+      return;
+    }
+    emptyEl.hidden = true;
+    bodyEl.hidden = false;
+
+    records = records.slice().sort(function (a, b) { return new Date(a.failure_triggered_at) - new Date(b.failure_triggered_at); });
+    const total = records.length;
+    const successes = records.filter(function (r) { return r.success; }).length;
+    const successRate = Math.round((successes / total) * 100);
+    const latest = records[records.length - 1];
+    const statusColor = successRate === 100 ? css("--status-good") : successRate >= 50 ? css("--status-warning") : css("--status-critical");
+
+    const tilesEl = document.getElementById(ids.tiles);
+    tilesEl.innerHTML = "";
+    tile(tilesEl, countLabel, total);
+    tile(
+      tilesEl,
+      "Success rate",
+      successRate + "%",
+      '<div class="status-row"><span class="status-dot" style="background:' + statusColor + '"></span>' +
+        '<span style="color:var(--text-secondary);font-size:0.78rem">' + successes + " of " + total + " succeeded</span></div>"
+    );
+    tile(tilesEl, "Latest duration", formatDuration(latest.rto_seconds));
+    tile(tilesEl, "Latest recovery-point age", formatDuration(latest.rpo_seconds));
+
+    const rtoPoints = records.map(function (r) { return { y: r.rto_seconds, label: formatDate(r.failure_triggered_at) }; });
+    const rpoPoints = records.map(function (r) { return { y: r.rpo_seconds, label: formatDate(r.failure_triggered_at) }; });
+    buildLineChart(document.getElementById(ids.chartRto), rtoPoints, css("--series-rto"));
+    buildLineChart(document.getElementById(ids.chartRpo), rpoPoints, css("--series-rpo"));
+  }
+
   fetch("data/history.json")
     .then(function (r) { return r.json(); })
     .then(function (history) {
       if (!Array.isArray(history) || history.length === 0) {
-        document.getElementById("empty").hidden = false;
+        document.getElementById("empty-all").hidden = false;
+        document.getElementById("empty-env").hidden = false;
+        document.getElementById("empty-restore").hidden = false;
         return;
       }
 
-      history.sort(function (a, b) { return new Date(a.failure_triggered_at) - new Date(b.failure_triggered_at); });
+      const envDrills = history.filter(function (r) { return r.resource_type === "ENV"; });
+      const restoreTests = history.filter(function (r) { return r.resource_type !== "ENV"; });
 
-      const total = history.length;
-      const successes = history.filter(function (r) { return r.success; }).length;
-      const successRate = Math.round((successes / total) * 100);
-      const latest = history[history.length - 1];
+      renderSection(envDrills, {
+        empty: "empty-env", body: "body-env", tiles: "tiles-env",
+        chartRto: "chart-rto-env", chartRpo: "chart-rpo-env",
+      }, "Drills recorded");
 
-      const tiles = document.getElementById("tiles");
-      const statusColor = successRate === 100 ? css("--status-good") : successRate >= 50 ? css("--status-warning") : css("--status-critical");
+      renderSection(restoreTests, {
+        empty: "empty-restore", body: "body-restore", tiles: "tiles-restore",
+        chartRto: "chart-rto-restore", chartRpo: "chart-rpo-restore",
+      }, "Tests recorded");
 
-      function tile(label, value, statusRow) {
-        const t = document.createElement("div");
-        t.className = "tile";
-        t.innerHTML = '<p class="label">' + label + "</p>" +
-          '<p class="value">' + value + "</p>" +
-          (statusRow || "");
-        tiles.appendChild(t);
-      }
-      tile("Drills recorded", total);
-      tile(
-        "Restore success rate",
-        successRate + "%",
-        '<div class="status-row"><span class="status-dot" style="background:' + statusColor + '"></span>' +
-          '<span style="color:var(--text-secondary);font-size:0.78rem">' + successes + " of " + total + " succeeded</span></div>"
-      );
-      tile("Latest RTO", formatDuration(latest.rto_seconds));
-      tile("Latest RPO", formatDuration(latest.rpo_seconds));
-
-      document.getElementById("charts").hidden = false;
       document.getElementById("table-wrap").hidden = false;
-
-      const rtoPoints = history.map(function (r) { return { y: r.rto_seconds, label: formatDate(r.failure_triggered_at) }; });
-      const rpoPoints = history.map(function (r) { return { y: r.rpo_seconds, label: formatDate(r.failure_triggered_at) }; });
-      buildLineChart(document.getElementById("chart-rto"), rtoPoints, css("--series-rto"));
-      buildLineChart(document.getElementById("chart-rpo"), rpoPoints, css("--series-rpo"));
-
       const tbody = document.getElementById("table-body");
-      history.slice().reverse().forEach(function (r) {
-        const tr = document.createElement("tr");
-        const statusDot = r.success ? css("--status-good") : css("--status-critical");
-        tr.innerHTML =
-          "<td>" + new Date(r.failure_triggered_at).toLocaleString() + "</td>" +
-          "<td>" + r.resource_type + " &middot; " + r.resource_id + "</td>" +
-          '<td class="num">' + formatDuration(r.rto_seconds) + "</td>" +
-          '<td class="num">' + formatDuration(r.rpo_seconds) + "</td>" +
-          '<td><span class="status-dot" style="display:inline-block;background:' + statusDot + '"></span> ' + (r.success ? "Success" : "Failed") + "</td>" +
-          '<td class="notes">' + (r.notes || "") + "</td>";
-        tbody.appendChild(tr);
-      });
+      history.slice().sort(function (a, b) { return new Date(b.failure_triggered_at) - new Date(a.failure_triggered_at); })
+        .forEach(function (r) {
+          const tr = document.createElement("tr");
+          const statusDot = r.success ? css("--status-good") : css("--status-critical");
+          tr.innerHTML =
+            "<td>" + new Date(r.failure_triggered_at).toLocaleString() + "</td>" +
+            "<td>" + categoryLabel(r.resource_type) + "</td>" +
+            "<td>" + r.resource_id + "</td>" +
+            '<td class="num">' + formatDuration(r.rto_seconds) + "</td>" +
+            '<td class="num">' + formatDuration(r.rpo_seconds) + "</td>" +
+            '<td><span class="status-dot" style="background:' + statusDot + '"></span> ' + (r.success ? "Success" : "Failed") + "</td>" +
+            '<td class="notes">' + (r.notes || "") + "</td>";
+          tbody.appendChild(tr);
+        });
     })
     .catch(function () {
-      document.getElementById("empty").hidden = false;
+      document.getElementById("empty-all").hidden = false;
+      document.getElementById("empty-env").hidden = false;
+      document.getElementById("empty-restore").hidden = false;
     });
 })();
 </script>
