@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
-      Deploy: false
+      Deploy-Infra: false
       environment: development
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}

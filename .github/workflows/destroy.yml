@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
-      destroy: true
+      Destroy-infra: true
       environment: development
       aws-region: eu-west-2
     secrets:
@@ -28,7 +28,7 @@ jobs:
       needs: terraform-destroy-infra
       with:
         working-directory: backup/
-        destroy: true
+        Destroy-infra: true
         environment: backup
         aws-region: eu-west-1
         empty-backup-vaults: true
@@ -43,7 +43,7 @@ jobs:
       needs: terraform-destroy-backup
       with:
         working-directory: restore_testing/
-        destroy: true
+        Destroy-infra: true
         environment: restore-testing
         aws-region: eu-west-1
       secrets:

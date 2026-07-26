@@ -7,12 +7,20 @@ on:
         description: "Terraform root module to run against (infra, backup, or restore_testing)"
         type: string
         required: true
-      Deploy:
+      Deploy-Infra:
         description: "Run terraform Deploy instead of terraform plan"
         type: boolean
         default: false
-      Destroy:
-        description: "Run terraform Destroy instead of terraform plan"
+      Deploy-restore-testing:
+        description: "Run terraform Deploy instead of terraform plan"
+        type: boolean
+        default: false
+      Deploy-Backup:
+        description: "Run terraform Deploy instead of terraform plan"
+        type: boolean
+        default: false
+      Destroy-infra:
+        description: "Run terraform destroy instead of terraform plan"
         type: boolean
         default: false
       aws-region:
@@ -104,7 +112,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        if : ${{ !inputs.Destroy }}
+        if : ${{ !inputs.Destroy-infra }}
         run: terraform plan -out=tfplan
         env:
           TF_VAR_aws_region: ${{ inputs.aws-region }}
@@ -117,18 +125,18 @@ jobs:
           TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
 
       - name: Terraform Deploy
-        if: ${{ inputs.Deploy }}
+        if: ${{ inputs.Deploy-Infra || inputs.Deploy-restore-testing || inputs.deploy_backup }}
         run: terraform apply -auto-approve tfplan
 
       - name: Read Terraform outputs
         id: tf_outputs
-        if: ${{ inputs.Deploy }}
+        if: ${{ inputs.Deploy-Infra }}
         run: |
           echo "alb_dns_name=$(terraform output -raw alb_dns_name 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
           echo "alb_zone_id=$(terraform output -raw alb_zone_id 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
 
       - name: Empty backup vaults before destroy
-        if: ${{ inputs.Destroy && inputs.empty-backup-vaults }}
+        if: ${{ inputs.Destroy-infra && inputs.empty-backup-vaults }}
         working-directory: ${{ github.workspace }}
         run: |
           for output in primary_vault_arn dr_vault_arn; do
@@ -137,7 +145,7 @@ jobs:
           done
 
       - name: Terraform Destroy
-        if: ${{ inputs.Destroy }}
+        if: ${{ inputs.Destroy-infra }}
         run: terraform destroy -auto-approve
         env:
           TF_VAR_aws_region: ${{ inputs.aws-region }}

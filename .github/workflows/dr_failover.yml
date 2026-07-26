@@ -56,7 +56,7 @@ jobs:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
-      Deploy: true
+      Deploy-Infra: true
       aws-region: ${{ vars.DR_REGION }}
       environment: development
       state-key: dr

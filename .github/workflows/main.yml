@@ -1,21 +1,56 @@
-name: "Deploy Infrastructure"
+name: "Main Workflow"
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+      inputs:
+        Deploy-Infra:
+          description: "Whet  her to deploy the Terraform plan for infra/"
+          required: true
+          type: boolean
+        Deploy-restore-testing: 
+          description: "Whether to deploy the Terraform plan for restore_testing/"
+          required: true
+          type: boolean
+        Deploy-Backup:
+          description: "Whether to deploy the Terraform plan for backup/"
+          required: true
+          type: boolean
+ 
 
 permissions:
   id-token: write
   contents: read
 jobs:
-  terraform-deploy:
+  terraform-deploy-infra:
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
-      Deploy: true
+      Deploy-Infra: ${{inputs.Deploy-Infra}}
+      aws-region: eu-west-2
       environment: development
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+
+  terraform-deploy:
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: backup/
+      deploy_backup: ${{inputs.Deploy-Backup}}
+      aws-region: eu-west-1
+      environment: backup
+    secrets:
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+
+  terraform-apply-Restore-Testing:
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: restore_testing/
+      deploy_restore_testing: ${{inputs.Deploy-restore-testing}}
+      aws-region: eu-west-1
+      environment: restore-testing
+    secrets:
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
