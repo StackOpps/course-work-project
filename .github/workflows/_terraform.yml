@@ -140,7 +140,11 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           for output in primary_vault_arn dr_vault_arn; do
-            arn=$(terraform -chdir="${{ inputs.working-directory }}" output -raw "$output")
+            arn=$(terraform -chdir="${{ inputs.working-directory }}" output -raw "$output" 2>/dev/null || true)
+            if [[ "$arn" != arn:aws:backup:* ]]; then
+              echo "$output not in state (backup/ not deployed here yet) - skipping"
+              continue
+            fi
             python scripts/empty_backup_vault.py --vault-arn "$arn"
           done
 
