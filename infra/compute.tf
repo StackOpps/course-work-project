@@ -198,7 +198,6 @@ resource "aws_instance" "crafthavens" {
   # instance and its attached EBS volumes are captured without editing
   # the backup plan whenever the instance is replaced.
   tags = {
-    Name   = "${local.name}-web"
-    Backup = "true"
+    Name = "${local.name}-web"
   }
 }

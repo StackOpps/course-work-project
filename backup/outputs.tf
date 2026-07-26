@@ -5,3 +5,11 @@ output "dr_vault_name" {
 output "dr_vault_arn" {
   value = aws_backup_vault.dr.arn
 }
+
+output "primary_vault_name" {
+  value = aws_backup_vault.primary.name
+}
+
+output "primary_vault_arn" {
+  value = aws_backup_vault.primary.arn
+}

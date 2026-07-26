@@ -15,79 +15,75 @@ permissions:
   contents: read
 
 jobs:
-  failover:
+  # RDS is the only tier with data that can't be reproduced from repo
+  # content, so it's the only one that needs an explicit restore:
+  #  - EC2 is stateless — user_data reinstalls nginx and re-syncs the
+  #    storefront straight from S3 on every boot, so Terraform recreating
+  #    the instance *is* the restore.
+  #  - S3's only objects (index.html/error.html) are Terraform-managed
+  #    (aws_s3_object in infra/storage.tf) and get re-uploaded from the repo
+  #    on every apply, in any region.
+  # RDS has no such source of truth to replay from, so this job finds the
+  # latest AWS Backup recovery point up front and hands its ARN to the
+  # provision job below.
+  find-latest-recovery-point:
     runs-on: ubuntu-latest
     environment: development
-    defaults:
-      run:
-        working-directory: infra
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+    outputs:
+      snapshot_arn: ${{ steps.lookup.outputs.snapshot_arn }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt
-        working-directory: .
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.9.8"
-          terraform_wrapper: false
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      # Re-applies the same infra/ configuration infra rebuilds the primary
-      # region from, but against a second state key and var.dr_region — the
-      # "same code that built the primary region" rebuilding it in the DR
-      # region (Section 3.3).
-      - name: Provision DR-region infrastructure
+      - name: Find latest RDS recovery point in the DR vault
+        id: lookup
         run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=infra-dr.tfstate" \
-            -backend-config="region=${{ vars.TF_STATE_REGION }}" \
-            -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}" \
-            -backend-config="encrypt=true"
-          terraform apply -auto-approve -input=false
-        env:
-          TF_VAR_aws_region: ${{ vars.DR_REGION }}
-          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
-          TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
-          TF_VAR_route53_zone_name: ${{ vars.ROUTE53_ZONE_NAME }}
-          TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
-
-      - name: Read DR load balancer address
-        id: dr_alb
-        run: |
-          echo "dns_name=$(terraform output -raw alb_dns_name)" >> "$GITHUB_OUTPUT"
-          echo "zone_id=$(terraform output -raw alb_zone_id)" >> "$GITHUB_OUTPUT"
-
-      - name: Restore data from the DR vault and measure RTO/RPO
-        working-directory: .
-        run: |
-          python scripts/restore_test.py \
-            --resource-type RDS \
+          arn=$(python scripts/latest_recovery_point_arn.py \
             --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
-            --vault "${{ vars.DR_BACKUP_VAULT_NAME }}" \
-            --iam-role-arn "${{ secrets.BACKUP_IAM_ROLE_ARN }}" \
-            --region "${{ vars.DR_REGION }}"
+            --region "${{ vars.DR_REGION }}")
+          echo "snapshot_arn=$arn" >> "$GITHUB_OUTPUT"
 
+  # Re-applies the same infra/ configuration infra rebuilds the primary
+  # region from, but against var.dr_region and a state key of its own so it
+  # never touches the primary region's state — the "same code that built the
+  # primary region" rebuilding it in the DR region (Section 3.3). Passing
+  # db-snapshot-identifier makes the RDS instance restore from the recovery
+  # point above instead of coming up empty.
+  provision:
+    needs: find-latest-recovery-point
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: infra/
+      Deploy: true
+      aws-region: ${{ vars.DR_REGION }}
+      environment: development
+      state-key: dr
+      db-snapshot-identifier: ${{ needs.find-latest-recovery-point.outputs.snapshot_arn }}
+    secrets:
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+
+  failover:
+    needs: provision
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+    steps:
       - name: Smoke check the DR environment
         run: |
           curl --fail --retry 10 --retry-delay 15 --retry-connrefused \
-            "http://${{ steps.dr_alb.outputs.dns_name }}/"
+            "http://${{ needs.provision.outputs.alb_dns_name }}/"
 
       # The DNS cutover is an explicit, imperative step taken by this
       # workflow once smoke checks pass — not something Terraform apply does
       # as a side effect — so the primary-region state never has to know
       # about it (Section 3.3: "the workflow updates the Route 53 record").
       - name: Point Route 53 at the DR environment
-        working-directory: .
         run: |
           aws route53 change-resource-record-sets \
             --hosted-zone-id "${{ vars.ROUTE53_ZONE_ID }}" \
@@ -98,17 +94,10 @@ jobs:
                   "Name": "${{ vars.APP_DOMAIN_NAME }}",
                   "Type": "A",
                   "AliasTarget": {
-                    "HostedZoneId": "${{ steps.dr_alb.outputs.zone_id }}",
-                    "DNSName": "${{ steps.dr_alb.outputs.dns_name }}",
+                    "HostedZoneId": "${{ needs.provision.outputs.alb_zone_id }}",
+                    "DNSName": "${{ needs.provision.outputs.alb_dns_name }}",
                     "EvaluateTargetHealth": true
                   }
                 }
               }]
             }'
-
-      - name: Upload failover results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dr-failover-results
-          path: results/

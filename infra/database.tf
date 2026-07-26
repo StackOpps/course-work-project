@@ -30,16 +30,22 @@ resource "aws_security_group" "db" {
 
 resource "aws_db_instance" "main" {
   identifier     = "${local.name}-db"
-  engine         = "mysql"
-  engine_version = var.db_engine_version
+  engine         = var.db_snapshot_identifier == "" ? "mysql" : null
+  engine_version = var.db_snapshot_identifier == "" ? var.db_engine_version : null
   instance_class = var.db_instance_class
 
-  allocated_storage = var.db_allocated_storage
+  # Restoring from a recovery point (DR failover) instead of creating an
+  # empty instance: engine/db_name/username come from the snapshot itself
+  # and must be left unset, but the password can still be reset on top of
+  # the restored data (Terraform issues a ModifyDBInstance call for it).
+  snapshot_identifier = var.db_snapshot_identifier != "" ? var.db_snapshot_identifier : null
+
+  allocated_storage = var.db_snapshot_identifier == "" ? var.db_allocated_storage : null
   storage_type      = "gp3"
   storage_encrypted = true
 
-  db_name  = var.db_name
-  username = var.db_username
+  db_name  = var.db_snapshot_identifier == "" ? var.db_name : null
+  username = var.db_snapshot_identifier == "" ? var.db_username : null
   password = var.db_password
 
   db_subnet_group_name   = aws_db_subnet_group.main.name

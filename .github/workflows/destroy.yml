@@ -31,6 +31,7 @@ jobs:
         destroy: true
         environment: backup
         aws-region: eu-west-1
+        empty-backup-vaults: true
       secrets:
         AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
         AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}

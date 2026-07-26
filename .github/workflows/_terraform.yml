@@ -23,10 +23,30 @@ on:
         description: "GitHub environment to run the job under (optional)"
         type: string
         default: ""
+      state-key:
+        description: "Terraform state key prefix (defaults to the environment name); override to keep a second apply of the same working-directory off the primary state, e.g. a DR re-apply of infra/"
+        type: string
+        default: ""
+      db-snapshot-identifier:
+        description: "AWS Backup recovery point ARN to restore the RDS instance from instead of creating it empty (infra/ only; ignored by stacks with no db_snapshot_identifier variable)"
+        type: string
+        default: ""
+      empty-backup-vaults:
+        description: "Before destroying, delete all recovery points from the primary_vault_arn/dr_vault_arn outputs so the vaults themselves can be destroyed (backup/ only; AWS Backup refuses to delete a non-empty vault and Terraform has no force_destroy for it)"
+        type: boolean
+        default: false
       terraform-version:
         description: "Terraform version to use"
         type: string
         default: "1.13.0"
+
+    outputs:
+      alb_dns_name:
+        description: "DNS name of the storefront load balancer (infra/ only; empty for stacks with no such output)"
+        value: ${{ jobs.terraform-build.outputs.alb_dns_name }}
+      alb_zone_id:
+        description: "Hosted zone ID of the storefront load balancer (infra/ only; empty for stacks with no such output)"
+        value: ${{ jobs.terraform-build.outputs.alb_zone_id }}
 
     secrets:
       AWS_ACCESS_KEY_PLATFORM:
@@ -56,6 +76,9 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+    outputs:
+      alb_dns_name: ${{ steps.tf_outputs.outputs.alb_dns_name }}
+      alb_zone_id: ${{ steps.tf_outputs.outputs.alb_zone_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,7 +96,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=terraform-tfstate-${{ inputs.aws-region}}-bckt" \
-            -backend-config="key=${{inputs.environment }}/terraform.tfstate" \
+            -backend-config="key=${{ inputs.state-key != '' && inputs.state-key || inputs.environment }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.aws-region }}" \
             -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
@@ -84,7 +107,9 @@ jobs:
         if : ${{ !inputs.Destroy }}
         run: terraform plan -out=tfplan
         env:
+          TF_VAR_aws_region: ${{ inputs.aws-region }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_db_snapshot_identifier: ${{ inputs.db-snapshot-identifier }}
           TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
           TF_VAR_github_owner: ${{ vars.GITHUB_OWNER }}
           TF_VAR_github_repo: ${{ vars.GITHUB_REPO }}
@@ -95,10 +120,27 @@ jobs:
         if: ${{ inputs.Deploy }}
         run: terraform apply -auto-approve tfplan
 
+      - name: Read Terraform outputs
+        id: tf_outputs
+        if: ${{ inputs.Deploy }}
+        run: |
+          echo "alb_dns_name=$(terraform output -raw alb_dns_name 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+          echo "alb_zone_id=$(terraform output -raw alb_zone_id 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Empty backup vaults before destroy
+        if: ${{ inputs.Destroy && inputs.empty-backup-vaults }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          for output in primary_vault_arn dr_vault_arn; do
+            arn=$(terraform -chdir="${{ inputs.working-directory }}" output -raw "$output")
+            python scripts/empty_backup_vault.py --vault-arn "$arn"
+          done
+
       - name: Terraform Destroy
         if: ${{ inputs.Destroy }}
         run: terraform destroy -auto-approve
         env:
+          TF_VAR_aws_region: ${{ inputs.aws-region }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_github_pat: ${{ secrets.TF_VAR_GITHUB_PAT }}
           TF_VAR_github_owner: ${{ vars.GITHUB_OWNER }}

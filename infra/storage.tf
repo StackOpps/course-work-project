@@ -1,9 +1,14 @@
 resource "aws_s3_bucket" "assets" {
   bucket = "${local.name}-assets-${data.aws_caller_identity.current.account_id}"
 
+  # The scheduled destroy workflow tears this bucket down every couple of
+  # hours; without force_destroy, terraform destroy fails the moment the
+  # bucket holds any object (or, since versioning is on below, any object
+  # version/delete marker) instead of emptying it first.
+  force_destroy = true
+
   tags = {
-    Name   = "${local.name}-assets"
-    Backup = "true"
+    Name = "${local.name}-assets"
   }
 }
 
@@ -71,6 +76,11 @@ resource "aws_s3_object" "site_error" {
 # tangled with product-asset lifecycle rules or bucket policy.
 resource "aws_s3_bucket" "cloudtrail" {
   bucket = "${local.name}-cloudtrail-${data.aws_caller_identity.current.account_id}"
+
+  # Same reasoning as the assets bucket above: CloudTrail keeps delivering
+  # log objects into this bucket, so it's never empty by the time the
+  # scheduled destroy runs.
+  force_destroy = true
 
   tags = { Name = "${local.name}-cloudtrail" }
 }
