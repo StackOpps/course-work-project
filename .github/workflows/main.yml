@@ -7,15 +7,17 @@ on:
           description: "Deploy the Terraform plan for infra/"
           required: true
           type: boolean
+          default: false
         Deploy-restore-testing: 
           description: "Deploy the Terraform plan for restore_testing/"
           required: true
           type: boolean
+          default: false  
         Deploy-Backup:
           description: "Deploy the Terraform plan for backup/"
           required: true
           type: boolean
- 
+          default: false
 
 permissions:
   id-token: write
