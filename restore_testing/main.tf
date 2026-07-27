@@ -8,10 +8,10 @@
 locals {
   name = "${var.project_name}-${var.environment}"
 
-  # Matches the vault infra/primary_vault.tf creates and the role it grants
-  # AWS Backup, both referenced here by name convention only — this stack
-  # has no Terraform dependency on infra/'s state.
-  dr_vault_arn    = "arn:aws:backup:${var.aws_region}:${data.aws_caller_identity.current.account_id}:backup-vault:${local.name}-vault"
+  # Matches the DR vault and backup role backup/vault.tf creates, both
+  # referenced here by name convention only — this stack has no Terraform
+  # dependency on backup/'s state.
+  dr_vault_arn    = "arn:aws:backup:${var.aws_region}:${data.aws_caller_identity.current.account_id}:backup-vault:${local.name}-dr-vault"
   backup_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.name}-backup-role"
 }
 

@@ -11,7 +11,7 @@ variable "environment" {
 }
 
 variable "aws_region" {
-  description = "Region the primary backup vault lives in; must match infra/'s var.primary_region"
+  description = "Region the DR backup vault lives in; must match backup/'s var.dr_region"
   type        = string
   default     = "eu-west-1"
 }

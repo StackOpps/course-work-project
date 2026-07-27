@@ -6,7 +6,7 @@ name: "DR Failover"
 # 3.3: "No human has to notice the outage first." workflow_dispatch is kept
 # only as a manual escape hatch for testing this path directly.
 on:
-  repository_dispatch:
+  repository_dispatch:  
     types: [dr-route53-health-check]
   workflow_dispatch: {}
 
