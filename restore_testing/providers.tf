@@ -1,17 +1,15 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.13.0"
 
   required_providers {
     aws = {
-      source = "hashicorp/aws"
-      # Restore testing plan/selection resources require a provider new
-      # enough to support them.
-      version = ">= 5.39, < 6.0"
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
     }
   }
 
-  # Same state bucket/lock table as infra/, under its own key so the two
-  # stacks never share state. CI supplies bucket/key/region/dynamodb_table
+  # Same state bucket/lock table as infra/ and backup/, under its own key so
+  # this stack never shares state with either. CI supplies bucket/key/region
   # via `terraform init -backend-config=...` (see infra/providers.tf).
   backend "s3" {}
 }

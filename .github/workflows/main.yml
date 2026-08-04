@@ -8,13 +8,13 @@ on:
           required: true
           type: boolean
           default: false
-        Deploy-restore-testing: 
-          description: "Deploy the Terraform plan for restore_testing/"
-          required: true
-          type: boolean
-          default: false  
         Deploy-Backup:
           description: "Deploy the Terraform plan for backup/"
+          required: true
+          type: boolean
+          default: false
+        Deploy-RestoreTesting:
+          description: "Deploy the Terraform plan for restore_testing/"
           required: true
           type: boolean
           default: false
@@ -47,17 +47,20 @@ jobs:
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
-      TF_VAR_github_repo: course-work-project
-      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
 
-  terraform-apply-Restore-Testing:
+  # backup/'s DR vault (this stack's recovery_point_selection target) must
+  # already exist, so this only succeeds after terraform-deploy-backup has
+  # run at least once — not made an explicit `needs` dependency since that
+  # would force redeploying backup/ every time this is toggled on its own.
+  terraform-deploy-restore-testing:
     uses: ./.github/workflows/_terraform.yml
-    if: ${{ inputs.Deploy-restore-testing }}
+    if: ${{ inputs.Deploy-RestoreTesting }}
     with:
       working-directory: restore_testing/
-      Deploy-restore-testing: true
+      Deploy-Backup: true
       aws-region: eu-west-1
-      environment: restore-testing
+      environment: backup
+      state-key: restore-testing
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}

@@ -43,25 +43,3 @@ provider "aws" {
     }
   }
 }
-
-# Route 53 health checks publish their CloudWatch metric (HealthCheckStatus)
-# only to us-east-1, regardless of which region the check itself targets —
-# an AWS constraint, not a deployment choice, so this is hardcoded rather
-# than driven by a variable. The alarm watching that metric has to live here
-# too, since it can only read metrics published in its own region. Pinning
-# site-down detection to us-east-1 (instead of the primary region) is the
-# whole point: it keeps working even if the primary region's own CloudWatch
-# control plane is what's down.
-provider "aws" {
-  alias  = "health_check"
-  region = "us-east-1"
-
-  default_tags {
-    tags = {
-      Project     = "crafthaven"
-      Environment = var.environment
-      ManagedBy   = "terraform"
-      Stack       = "backup"
-    }
-  }
-}

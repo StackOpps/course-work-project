@@ -15,12 +15,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
-from dataclasses import asdict
 from datetime import datetime
-from pathlib import Path
 
-from dr_lib import RecoveryResult, utcnow
+from dr_lib import RecoveryResult, append_history, utcnow
 
 
 def main() -> int:
@@ -56,13 +53,9 @@ def main() -> int:
         )
         result.finish(recovery_point_creation_time=recovery_point_created)
 
-    history_path = Path(args.history)
-    history_path.parent.mkdir(parents=True, exist_ok=True)
-    history = json.loads(history_path.read_text()) if history_path.exists() else []
-    history.append(asdict(result))
-    history_path.write_text(json.dumps(history, indent=2) + "\n")
+    history_path = append_history(result, args.history)
 
-    print(f"Recorded {args.resource_type} drill -> {history_path} ({len(history)} total)")
+    print(f"Recorded {args.resource_type} drill -> {history_path}")
     return 0
 
 

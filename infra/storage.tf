@@ -72,6 +72,32 @@ resource "aws_s3_object" "site_error" {
   etag         = filemd5("${path.module}/site_src/error.html")
   content_type = "text/html"
 }
+
+# PHP app files behind the waitlist form (see compute.tf): a real write path
+# into RDS, so a DR restore has actual data to prove, not just a static page.
+resource "aws_s3_object" "site_db_php" {
+  bucket       = aws_s3_bucket.assets.id
+  key          = "db.php"
+  source       = "${path.module}/site_src/db.php"
+  etag         = filemd5("${path.module}/site_src/db.php")
+  content_type = "application/x-httpd-php"
+}
+
+resource "aws_s3_object" "site_signup_php" {
+  bucket       = aws_s3_bucket.assets.id
+  key          = "signup.php"
+  source       = "${path.module}/site_src/signup.php"
+  etag         = filemd5("${path.module}/site_src/signup.php")
+  content_type = "application/x-httpd-php"
+}
+
+resource "aws_s3_object" "site_signups_php" {
+  bucket       = aws_s3_bucket.assets.id
+  key          = "signups.php"
+  source       = "${path.module}/site_src/signups.php"
+  etag         = filemd5("${path.module}/site_src/signups.php")
+  content_type = "application/x-httpd-php"
+}
 # Separate bucket for CloudTrail logs (monitoring.tf) so trail delivery isn't
 # tangled with product-asset lifecycle rules or bucket policy.
 resource "aws_s3_bucket" "cloudtrail" {

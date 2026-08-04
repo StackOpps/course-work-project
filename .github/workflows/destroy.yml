@@ -20,32 +20,47 @@ jobs:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
-      TF_VAR_GITHUB_PAT: ${{ secrets.TF_VAR_GITHUB_PAT }}
 
+
+  terraform-destroy-dr-infra:
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: infra/
+      Destroy-infra: true
+      environment: development
+      aws-region: ${{ vars.DR_REGION }}
+      state-key: dr
+    secrets:
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+      TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
+
+  # Torn down before backup/ below, since its restore-testing-plan references
+  # the DR vault backup/ manages by ARN convention - not a Terraform
+  # dependency, but destroying in this order avoids leaving a plan pointed at
+  # a vault that's already gone. Same safe-no-op behaviour as the DR infra
+  # job above when nothing's deployed here.
+  terraform-destroy-restore-testing:
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      working-directory: restore_testing/
+      Destroy-infra: true
+      environment: backup
+      aws-region: eu-west-1
+      state-key: restore-testing
+    secrets:
+      AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
 
   terraform-destroy-backup:
       uses: ./.github/workflows/_terraform.yml
-      needs: terraform-destroy-infra
+      needs: [terraform-destroy-infra, terraform-destroy-restore-testing]
       with:
         working-directory: backup/
         Destroy-infra: true
         environment: backup
         aws-region: eu-west-1
         empty-backup-vaults: true
-      secrets:
-        AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
-        AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
-
-
-
-  terraform-destroy-restore-testing:
-      uses: ./.github/workflows/_terraform.yml
-      needs: terraform-destroy-backup
-      with:
-        working-directory: restore_testing/
-        Destroy-infra: true
-        environment: restore-testing
-        aws-region: eu-west-1
       secrets:
         AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
         AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}

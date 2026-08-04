@@ -1,13 +1,12 @@
 name: "DR Failover"
 
-# Started by EventBridge (via an API destination calling this repo's
-# repository_dispatch API) once the Route 53 health check (backup/) confirms
-# the storefront has been unreachable for three consecutive checks — Section
-# 3.3: "No human has to notice the outage first." workflow_dispatch is kept
-# only as a manual escape hatch for testing this path directly.
+# Manually triggered only. The recovery mechanics — Terraform re-apply
+# against the DR region, RDS restored from the latest AWS Backup recovery
+# point (infra/database.tf's data lookup), then a DNS cutover — are
+# identical whether started by a human or an automated site-down signal, so
+# this repo doesn't wire up automatic detection; a button click on this
+# workflow exercises the same path an alarm would.
 on:
-  repository_dispatch:  
-    types: [dr-route53-health-check]
   workflow_dispatch: {}
 
 permissions:
@@ -15,59 +14,32 @@ permissions:
   contents: read
 
 jobs:
-  # RDS is the only tier with data that can't be reproduced from repo
-  # content, so it's the only one that needs an explicit restore:
-  #  - EC2 is stateless — user_data reinstalls nginx and re-syncs the
-  #    storefront straight from S3 on every boot, so Terraform recreating
-  #    the instance *is* the restore.
-  #  - S3's only objects (index.html/error.html) are Terraform-managed
-  #    (aws_s3_object in infra/storage.tf) and get re-uploaded from the repo
-  #    on every apply, in any region.
-  # RDS has no such source of truth to replay from, so this job finds the
-  # latest AWS Backup recovery point up front and hands its ARN to the
-  # provision job below.
-  find-latest-recovery-point:
+  # Closest available proxy for "a failure was detected" (Section 3.4's RTO
+  # start point) now that triggering is manual: timed at the start of this
+  # run rather than at some external alarm's timestamp. Its own job so it
+  # can run in parallel with provisioning below instead of blocking it.
+  record-start-time:
     runs-on: ubuntu-latest
-    environment: development
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
     outputs:
-      snapshot_arn: ${{ steps.lookup.outputs.snapshot_arn }}
-      snapshot_created_at: ${{ steps.lookup.outputs.snapshot_created_at }}
       failure_triggered_at: ${{ steps.trigger_time.outputs.failure_triggered_at }}
     steps:
-      - uses: actions/checkout@v4
-
-      # Closest available proxy for "the composite/health-check alarm fired"
-      # (Section 3.4's RTO start point): repository_dispatch -> job start is a
-      # few seconds at most, so this is timed at the earliest point this
-      # workflow can observe rather than at EventBridge's own alarm timestamp,
-      # which isn't threaded through the API destination payload today.
       - name: Record when this drill started
         id: trigger_time
         run: echo "failure_triggered_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      - name: Find latest RDS recovery point in the DR vault
-        id: lookup
-        run: |
-          arn=$(python scripts/latest_recovery_point_arn.py \
-            --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
-            --region "${{ vars.DR_REGION }}")
-          echo "snapshot_arn=$arn" >> "$GITHUB_OUTPUT"
-          created_at=$(python scripts/latest_recovery_point_arn.py \
-            --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
-            --region "${{ vars.DR_REGION }}" --field created-at)
-          echo "snapshot_created_at=$created_at" >> "$GITHUB_OUTPUT"
-
-  # Re-applies the same infra/ configuration infra rebuilds the primary
-  # region from, but against var.dr_region and a state key of its own so it
-  # never touches the primary region's state — the "same code that built the
-  # primary region" rebuilding it in the DR region (Section 3.3). Passing
-  # db-snapshot-identifier makes the RDS instance restore from the recovery
-  # point above instead of coming up empty.
+  # RDS is the only tier with data that can't be reproduced from repo
+  # content, so it's the only one that needs an explicit restore:
+  #  - EC2 is stateless — user_data reinstalls nginx/php-fpm and re-syncs the
+  #    storefront straight from S3 on every boot, so Terraform recreating
+  #    the instance *is* the restore.
+  #  - S3's only objects are Terraform-managed (aws_s3_object in
+  #    infra/storage.tf) and get re-uploaded from the repo on every apply,
+  #    in any region.
+  # infra/database.tf finds the latest AWS Backup recovery point in this
+  # region itself via a data source, so this is just a normal re-apply of
+  # infra/ against the DR region — no separate lookup step or Terraform
+  # variable needed.
   provision:
-    needs: find-latest-recovery-point
     uses: ./.github/workflows/_terraform.yml
     with:
       working-directory: infra/
@@ -75,14 +47,13 @@ jobs:
       aws-region: ${{ vars.DR_REGION }}
       environment: development
       state-key: dr
-      db-snapshot-identifier: ${{ needs.find-latest-recovery-point.outputs.snapshot_arn }}
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
 
   failover:
-    needs: [provision, find-latest-recovery-point]
+    needs: [provision, record-start-time]
     runs-on: ubuntu-latest
     environment: development
     permissions:
@@ -92,6 +63,13 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install script dependencies
+        run: pip install -r requirements.txt
 
       - name: Smoke check the DR environment
         run: |
@@ -124,16 +102,15 @@ jobs:
       # Turns this drill into a permanent, plottable record (Section 3.4's
       # RTO/RPO evaluation) instead of a number that only ever existed in this
       # run's logs. docs/data/history.json is served by GitHub Pages
-      # (docs/index.html), so every automated failover — and every manual
-      # workflow_dispatch drill — adds one point to that dashboard.
+      # (docs/index.html), so every drill adds one point to that dashboard.
       - name: Record this drill's RTO/RPO
         run: |
           python scripts/record_dr_result.py \
             --resource-type ENV \
             --resource-id "${{ vars.APP_DOMAIN_NAME }}" \
-            --failure-triggered-at "${{ needs.find-latest-recovery-point.outputs.failure_triggered_at }}" \
-            --recovery-point-created-at "${{ needs.find-latest-recovery-point.outputs.snapshot_created_at }}" \
-            --notes "Automated DR failover (event: ${{ github.event.action || 'workflow_dispatch' }})"
+            --failure-triggered-at "${{ needs.record-start-time.outputs.failure_triggered_at }}" \
+            --recovery-point-created-at "${{ needs.provision.outputs.recovery_point_created_at }}" \
+            --notes "Manual DR failover drill"
 
       - name: Publish result to the dashboard
         run: |

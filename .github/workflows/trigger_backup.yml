@@ -1,0 +1,89 @@
+name: "Trigger On-Demand Backup + DR Copy"
+
+# Manual escape hatch for demos and rehearsals: the scheduled backup plan
+# (backup/vault.tf) only runs hourly, so data entered on the storefront
+# moments before a live failover run has no recovery point yet. This starts
+# an on-demand backup of the RDS instance and copies it straight into the DR
+# vault, so the very next dr_failover.yml run has that data to restore from.
+#
+# No Terraform resource exists for this on purpose: start-backup-job and
+# start-copy-job are one-shot imperative actions, not desired state, so
+# there's nothing for Terraform to declare or reconcile — the AWS Backup
+# *schedule* is the declarative part, and that's already a real Terraform
+# resource (backup/vault.tf's aws_backup_plan). Plain AWS CLI calls here,
+# same as this repo's other one-shot actions (e.g. destroy.yml emptying a
+# vault before Terraform can destroy it) — no separate script needed.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  backup-and-copy:
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 30
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+      AWS_DEFAULT_REGION: eu-west-2
+      PRIMARY_VAULT: crafthaven-dev-vault
+      DR_VAULT: crafthaven-dev-dr-vault
+      BACKUP_ROLE: crafthaven-dev-backup-role
+    steps:
+      - name: Start on-demand backup
+        id: backup
+        run: |
+          set -euo pipefail
+          account_id=$(aws sts get-caller-identity --query Account --output text)
+          role_arn="arn:aws:iam::${account_id}:role/${BACKUP_ROLE}"
+
+          job_id=$(aws backup start-backup-job \
+            --backup-vault-name "$PRIMARY_VAULT" \
+            --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
+            --iam-role-arn "$role_arn" \
+            --query BackupJobId --output text)
+          echo "Backup job $job_id started"
+
+          while :; do
+            state=$(aws backup describe-backup-job --backup-job-id "$job_id" --query State --output text)
+            echo "backup job $job_id: $state"
+            case "$state" in
+              COMPLETED) break ;;
+              ABORTED|FAILED|EXPIRED) echo "Backup job ended in $state" >&2; exit 1 ;;
+            esac
+            sleep 15
+          done
+
+          recovery_point_arn=$(aws backup describe-backup-job --backup-job-id "$job_id" --query RecoveryPointArn --output text)
+          echo "Backup complete: $recovery_point_arn"
+          echo "recovery_point_arn=$recovery_point_arn" >> "$GITHUB_OUTPUT"
+          echo "role_arn=$role_arn" >> "$GITHUB_OUTPUT"
+
+      - name: Copy recovery point into the DR vault
+        run: |
+          set -euo pipefail
+          account_id=$(aws sts get-caller-identity --query Account --output text)
+          dest_vault_arn="arn:aws:backup:${{ vars.DR_REGION }}:${account_id}:backup-vault:${DR_VAULT}"
+
+          job_id=$(aws backup start-copy-job \
+            --recovery-point-arn "${{ steps.backup.outputs.recovery_point_arn }}" \
+            --source-backup-vault-name "$PRIMARY_VAULT" \
+            --destination-backup-vault-arn "$dest_vault_arn" \
+            --iam-role-arn "${{ steps.backup.outputs.role_arn }}" \
+            --query CopyJobId --output text)
+          echo "Copy job $job_id started"
+
+          while :; do
+            state=$(aws backup describe-copy-job --copy-job-id "$job_id" --query 'CopyJob.State' --output text)
+            echo "copy job $job_id: $state"
+            case "$state" in
+              COMPLETED) break ;;
+              ABORTED|FAILED) echo "Copy job ended in $state" >&2; exit 1 ;;
+            esac
+            sleep 15
+          done
+
+          echo "DR vault now holds an up-to-date recovery point; dr_failover.yml will restore from it."

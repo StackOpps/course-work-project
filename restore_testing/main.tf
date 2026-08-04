@@ -1,7 +1,9 @@
 # AWS Backup's native restore-testing feature: regularly restores a sample
-# recovery point and reports whether it succeeded, independent of the
-# scripts/restore_test.py path that measures RTO/RPO for Chapter 4's
-# evaluation. Kept as its own root module so its restore jobs can never
+# recovery point and reports whether it succeeded, independent of the full
+# dr_failover.yml drill. AWS Backup builds the restore's metadata itself
+# from the recovery point (target identifier, instance class, networking),
+# so unlike a hand-rolled restore script there's no Metadata document to
+# get wrong. Kept as its own root module so its restore jobs can never
 # create a dependency cycle with infra/'s backup plan (infra creates the
 # vault and recovery points; this stack only reads them by ARN convention).
 
@@ -32,15 +34,6 @@ resource "aws_backup_restore_testing_selection" "rds" {
   name                      = "rds"
   restore_testing_plan_name = aws_backup_restore_testing_plan.main.name
   protected_resource_type   = "RDS"
-  iam_role_arn              = local.backup_role_arn
-  protected_resource_arns   = ["*"]
-  validation_window_hours   = var.validation_window_hours
-}
-
-resource "aws_backup_restore_testing_selection" "ec2" {
-  name                      = "ec2"
-  restore_testing_plan_name = aws_backup_restore_testing_plan.main.name
-  protected_resource_type   = "EC2"
   iam_role_arn              = local.backup_role_arn
   protected_resource_arns   = ["*"]
   validation_window_hours   = var.validation_window_hours

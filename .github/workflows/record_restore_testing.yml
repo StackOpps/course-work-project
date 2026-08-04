@@ -5,7 +5,10 @@ name: "Record Restore Testing Results"
 # currently hourly - AWS Backup won't go more frequent than that). Nothing in
 # this repo triggers those runs, so this workflow just polls for newly
 # completed ones and folds them into the same dashboard dr_failover.yml
-# writes to, on its own independent schedule.
+# writes to, on its own independent schedule. Uses the "development"
+# environment (same as the other manual workflows here) rather than a
+# dedicated one, so there's no separate GitHub environment to configure
+# before this can run.
 on:
   schedule:
     - cron: '15 * * * *' # 15 minutes past every hour, clear of the :00 test runs
@@ -17,18 +20,25 @@ permissions:
 jobs:
   record:
     runs-on: ubuntu-latest
-    environment: restore_testing
+    environment: development
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install script dependencies
+        run: pip install -r requirements.txt
+
       - name: Record any newly completed restore-testing jobs
         run: |
           python scripts/record_restore_testing_results.py \
-            --region eu-west-1 \
-            --vault-name crafthaven-dev-vault
+            --region "${{ vars.DR_REGION }}" \
+            --vault-name crafthaven-dev-dr-vault
 
       - name: Publish to the dashboard if there's anything new
         run: |

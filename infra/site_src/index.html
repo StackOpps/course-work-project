@@ -510,10 +510,11 @@
       <h2>Get early access</h2>
       <p>Join the waitlist to shop the first drop before we open to the public, and hear from makers as they join CraftHaven.</p>
       <form class="signup" id="signup-form">
+        <input type="text" id="signup-name" placeholder="Your name" aria-label="Name">
         <input type="email" id="signup-email" placeholder="you@example.com" required aria-label="Email address">
         <button type="submit">Join waitlist</button>
       </form>
-      <p class="form-note" id="signup-note">Questions? hello@crafthavens.com</p>
+      <p class="form-note" id="signup-note">Questions? hello@crafthavens.com &middot; <a href="/signups.php">View waitlist (live from the database)</a></p>
     </div>
   </section>
 
@@ -572,11 +573,27 @@
 <script>
   document.getElementById('signup-form').addEventListener('submit', function (e) {
     e.preventDefault();
+    var form = this;
     var note = document.getElementById('signup-note');
     var email = document.getElementById('signup-email').value;
-    note.textContent = "Thanks — we'll respond to you as soon as the store opens.";
-    note.classList.add('success');
-    this.reset();
+    var name = document.getElementById('signup-name').value;
+    note.classList.remove('success');
+    note.textContent = 'Saving…';
+    fetch('/signup.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, name: name })
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (result) {
+        if (!result.ok) { throw new Error(result.data.error || 'Signup failed'); }
+        note.textContent = "Thanks — you're on the list. View it live in the database →";
+        note.classList.add('success');
+        form.reset();
+      })
+      .catch(function (err) {
+        note.textContent = 'Something went wrong: ' + err.message;
+      });
   });
   document.querySelectorAll('nav.links a').forEach(function (a) {
     a.addEventListener('click', function () {

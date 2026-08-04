@@ -173,20 +173,88 @@ resource "aws_instance" "crafthavens" {
   vpc_security_group_ids = [aws_security_group.web.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2.name
 
-  # Installs nginx and pulls the storefront's static content from the assets
-  # bucket (site_src/, uploaded via aws_s3_object in storage.tf) so the ALB
-  # health check on "/" has something to hit. depends_on below makes sure
-  # those objects exist before the sync runs.
-  user_data = <<-EOF
-    #!/bin/bash
-    set -euxo pipefail
-    dnf install -y nginx
-    rm -rf /usr/share/nginx/html/*
-    aws s3 sync "s3://${aws_s3_bucket.assets.id}" /usr/share/nginx/html
-    systemctl enable --now nginx
-  EOF
+  # Installs nginx + PHP-FPM and pulls the storefront's content from the
+  # assets bucket (site_src/, uploaded via aws_s3_object in storage.tf) so
+  # the ALB health check on "/" has something to hit. depends_on below makes
+  # sure those objects exist before the sync runs. PHP-FPM is wired straight
+  # to RDS (db.address is only known once the DB instance exists, which also
+  # makes that Terraform dependency implicit) so the waitlist form on the
+  # homepage writes real rows — the one thing a DR restore actually needs to
+  # prove, since EC2/S3 are otherwise fully reproduced from this same script.
+  # Credentials land in user_data/instance metadata rather than a secrets
+  # store, an acceptable simplification for this research testbed but not
+  # for a production deployment.
+  # Not a "<<-" (dedenting) heredoc on purpose: this script contains its own
+  # nested heredocs (PHPENV, NGINXCONF), and Terraform's dedent would strip
+  # leading spaces off their closing markers too, breaking bash's exact-match
+  # requirement for an unindented heredoc terminator.
+  user_data = <<EOF
+#!/bin/bash
+set -euxo pipefail
+dnf install -y nginx php php-fpm php-pdo php-mysqlnd
 
-  depends_on = [aws_s3_object.site_index, aws_s3_object.site_error]
+rm -rf /usr/share/nginx/html/*
+aws s3 sync "s3://${aws_s3_bucket.assets.id}" /usr/share/nginx/html
+
+cat >> /etc/php-fpm.d/www.conf <<PHPENV
+
+env[DB_HOST] = ${aws_db_instance.main.address}
+env[DB_NAME] = ${var.db_name}
+env[DB_USER] = ${var.db_username}
+env[DB_PASSWORD] = ${var.db_password}
+PHPENV
+sed -i 's/^listen = .*/listen = 127.0.0.1:9000/' /etc/php-fpm.d/www.conf
+
+cat > /etc/nginx/nginx.conf <<'NGINXCONF'
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+    sendfile      on;
+    keepalive_timeout 65;
+
+    server {
+        listen 80 default_server;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html index.php;
+
+        error_page 404 /error.html;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+
+        location ~ \.php$ {
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            include fastcgi_params;
+        }
+    }
+}
+NGINXCONF
+
+systemctl enable --now php-fpm
+systemctl enable --now nginx
+systemctl restart php-fpm nginx
+EOF
+
+  depends_on = [
+    aws_s3_object.site_index,
+    aws_s3_object.site_error,
+    aws_s3_object.site_db_php,
+    aws_s3_object.site_signup_php,
+    aws_s3_object.site_signups_php,
+  ]
 
   root_block_device {
     volume_size = 20
@@ -194,9 +262,6 @@ resource "aws_instance" "crafthavens" {
     encrypted   = true
   }
 
-  # Backup selection targets this tag directly (see backup/) so the
-  # instance and its attached EBS volumes are captured without editing
-  # the backup plan whenever the instance is replaced.
   tags = {
     Name = "${local.name}-web"
   }

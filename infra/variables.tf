@@ -106,14 +106,8 @@ variable "db_password" {
   sensitive   = true
 }
 
-variable "db_snapshot_identifier" {
-  description = "AWS Backup recovery point ARN (RDS) to restore the DB instance from instead of creating it empty; used during DR failover, empty for a normal apply"
-  type        = string
-  default     = ""
-}
-
 variable "alert_email" {
-  description = "Email address that receives CloudWatch alarm notifications (site-down, EC2/RDS health)"
+  description = "Email address that receives CloudWatch alarm notifications (EC2/RDS health)"
   type        = string
   default     = ""
 }

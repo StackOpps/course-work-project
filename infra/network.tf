@@ -8,6 +8,7 @@ locals {
   azs  = slice(data.aws_availability_zones.available.names, 0, var.az_count)
 
   is_primary_region = var.aws_region == var.primary_region
+  is_dr_region      = var.aws_region == var.dr_region
 }
 
 resource "aws_vpc" "main" {
