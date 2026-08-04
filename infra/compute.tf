@@ -173,37 +173,17 @@ resource "aws_instance" "crafthavens" {
   vpc_security_group_ids = [aws_security_group.web.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2.name
 
-  # Installs nginx + PHP-FPM and pulls the storefront's content from the
-  # assets bucket (site_src/, uploaded via aws_s3_object in storage.tf) so
-  # the ALB health check on "/" has something to hit. depends_on below makes
-  # sure those objects exist before the sync runs. PHP-FPM is wired straight
-  # to RDS (db.address is only known once the DB instance exists, which also
-  # makes that Terraform dependency implicit) so the waitlist form on the
-  # homepage writes real rows — the one thing a DR restore actually needs to
-  # prove, since EC2/S3 are otherwise fully reproduced from this same script.
-  # Credentials land in user_data/instance metadata rather than a secrets
-  # store, an acceptable simplification for this research testbed but not
-  # for a production deployment.
-  # Not a "<<-" (dedenting) heredoc on purpose: this script contains its own
-  # nested heredocs (PHPENV, NGINXCONF), and Terraform's dedent would strip
-  # leading spaces off their closing markers too, breaking bash's exact-match
-  # requirement for an unindented heredoc terminator.
+  # nginx comes up before PHP-FPM is even attempted, and a PHP-FPM failure
+  # is caught rather than left to `set -e`: the ALB health check and static
+  # homepage only need nginx, so a broken PHP install must degrade the
+  # waitlist form (/signup.php) rather than take the whole site down.
   user_data = <<EOF
 #!/bin/bash
 set -euxo pipefail
-dnf install -y nginx php php-fpm php-pdo php-mysqlnd
+dnf install -y nginx
 
 rm -rf /usr/share/nginx/html/*
 aws s3 sync "s3://${aws_s3_bucket.assets.id}" /usr/share/nginx/html
-
-cat >> /etc/php-fpm.d/www.conf <<PHPENV
-
-env[DB_HOST] = ${aws_db_instance.main.address}
-env[DB_NAME] = ${var.db_name}
-env[DB_USER] = ${var.db_username}
-env[DB_PASSWORD] = ${var.db_password}
-PHPENV
-sed -i 's/^listen = .*/listen = 127.0.0.1:9000/' /etc/php-fpm.d/www.conf
 
 cat > /etc/nginx/nginx.conf <<'NGINXCONF'
 user nginx;
@@ -243,9 +223,22 @@ http {
 }
 NGINXCONF
 
-systemctl enable --now php-fpm
 systemctl enable --now nginx
-systemctl restart php-fpm nginx
+
+if dnf install -y php php-fpm php-pdo php-mysqlnd; then
+  cat >> /etc/php-fpm.d/www.conf <<'PHPENV'
+
+env[DB_HOST] = ${aws_db_instance.main.address}
+env[DB_NAME] = ${var.db_name}
+env[DB_USER] = ${var.db_username}
+env[DB_PASSWORD] = ${var.db_password}
+PHPENV
+  sed -i 's/^listen = .*/listen = 127.0.0.1:9000/' /etc/php-fpm.d/www.conf
+  systemctl enable --now php-fpm
+  systemctl reload nginx
+else
+  echo "PHP package install failed; waitlist form will be unavailable but the storefront stays up" >&2
+fi
 EOF
 
   depends_on = [
