@@ -236,12 +236,15 @@ NGINXCONF
 systemctl enable --now nginx
 
 if dnf install -y php php-fpm php-pdo php-mysqlnd; then
+  # DB_PASSWORD is base64-encoded here and decoded in db.php: it may contain
+  # ini-special characters (e.g. ~, ", ;) that would otherwise break parsing
+  # of this whole file if the raw password were interpolated unquoted.
   cat >> /etc/php-fpm.d/www.conf <<'PHPENV'
 
 env[DB_HOST] = ${aws_db_instance.main.address}
 env[DB_NAME] = ${var.db_name}
 env[DB_USER] = ${var.db_username}
-env[DB_PASSWORD] = ${var.db_password}
+env[DB_PASSWORD_B64] = ${base64encode(var.db_password)}
 PHPENV
   sed -i 's/^listen = .*/listen = 127.0.0.1:9000/' /etc/php-fpm.d/www.conf
   systemctl enable --now php-fpm

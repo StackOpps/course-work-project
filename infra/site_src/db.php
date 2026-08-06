@@ -5,7 +5,7 @@ function db(): PDO {
         $pdo = new PDO(
             sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', getenv('DB_HOST'), getenv('DB_NAME')),
             getenv('DB_USER'),
-            getenv('DB_PASSWORD'),
+            base64_decode(getenv('DB_PASSWORD_B64')),
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
         // Safety net for a fresh (non-restored) database only — after a DR
