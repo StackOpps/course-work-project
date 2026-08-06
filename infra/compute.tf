@@ -218,6 +218,16 @@ http {
             fastcgi_index index.php;
             fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
             include fastcgi_params;
+            fastcgi_intercept_errors on;
+            error_page 502 503 504 = @php_unavailable;
+        }
+
+        # PHP-FPM being down (failed install, crashed pool) must not surface
+        # nginx's raw HTML error page to signup.php's fetch() caller, which
+        # expects JSON and throws a confusing parse error on HTML.
+        location @php_unavailable {
+            default_type application/json;
+            return 503 '{"error":"Signup is temporarily unavailable, please try again shortly."}';
         }
     }
 }
