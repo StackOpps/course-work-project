@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "assets" {
-  bucket = "${local.name}-assets-${data.aws_caller_identity.current.account_id}"
+  bucket = "${local.name}-assets-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
 
   # The scheduled destroy workflow tears this bucket down every couple of
   # hours; without force_destroy, terraform destroy fails the moment the
@@ -101,7 +101,7 @@ resource "aws_s3_object" "site_signups_php" {
 # Separate bucket for CloudTrail logs (monitoring.tf) so trail delivery isn't
 # tangled with product-asset lifecycle rules or bucket policy.
 resource "aws_s3_bucket" "cloudtrail" {
-  bucket = "${local.name}-cloudtrail-${data.aws_caller_identity.current.account_id}"
+  bucket = "${local.name}-cloudtrail-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
 
   # Same reasoning as the assets bucket above: CloudTrail keeps delivering
   # log objects into this bucket, so it's never empty by the time the

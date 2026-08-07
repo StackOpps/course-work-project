@@ -128,7 +128,7 @@ resource "aws_lb_target_group_attachment" "web" {
 }
 
 resource "aws_iam_role" "ec2" {
-  name = "${local.name}-ec2-role"
+  name = "${local.name}-ec2-role-${data.aws_region.current.name}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -148,7 +148,7 @@ resource "aws_iam_role_policy_attachment" "ssm" {
 }
 
 resource "aws_iam_role_policy" "ec2_s3_assets" {
-  name = "${local.name}-ec2-s3-assets"
+  name = "${local.name}-ec2-s3-assets-${data.aws_region.current.name}"
   role = aws_iam_role.ec2.id
 
   policy = jsonencode({
@@ -162,7 +162,7 @@ resource "aws_iam_role_policy" "ec2_s3_assets" {
 }
 
 resource "aws_iam_instance_profile" "ec2" {
-  name = "${local.name}-ec2-profile"
+  name = "${local.name}-ec2-profile-${data.aws_region.current.name}"
   role = aws_iam_role.ec2.name
 }
 
