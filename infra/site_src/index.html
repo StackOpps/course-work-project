@@ -587,7 +587,7 @@
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (result) {
         if (!result.ok) { throw new Error(result.data.error || 'Signup failed'); }
-        note.textContent = "Thanks — you're on the list. View it live in the database →";
+        note.textContent = "Thanks — you're on the list.";
         note.classList.add('success');
         form.reset();
       })

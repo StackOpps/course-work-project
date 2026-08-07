@@ -104,6 +104,19 @@
     gap: 12px;
     margin-bottom: 16px;
   }
+
+  .scorecard-table th:first-child, .scorecard-table td:first-child { width: 15%; }
+  .scorecard-table th:nth-child(2), .scorecard-table td:nth-child(2) { width: 18%; }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .status-pill .status-dot { width: 8px; height: 8px; }
+  td.evidence { white-space: normal; color: var(--text-secondary); line-height: 1.5; }
   .tile {
     background: var(--surface-1);
     border: 1px solid var(--border);
@@ -236,6 +249,66 @@
     or wait for <code>restore_testing/</code>'s next scheduled run — this page
     updates on the next push to <code>docs/data/history.json</code>.
   </div>
+
+  <section class="result-group" id="section-scorecard">
+    <h2>Evaluation Scorecard</h2>
+    <p class="section-sub">
+      Every row maps directly onto Dissertation &sect;3.4. The first three are
+      computed live from <code>history.json</code> below; the rest are the
+      design's current status against that same criteria table &mdash; shown
+      honestly rather than inferred from the drill data, since they aren't
+      measurable that way.
+    </p>
+    <div class="table-scroll">
+      <table class="scorecard-table">
+        <thead>
+          <tr><th>Criterion</th><th>Status</th><th>Evidence</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>RTO</td>
+            <td id="sc-status-rto"><span class="status-pill"><span class="status-dot"></span>&hellip;</span></td>
+            <td class="evidence" id="sc-evidence-rto">Awaiting drill data.</td>
+          </tr>
+          <tr>
+            <td>RPO</td>
+            <td id="sc-status-rpo"><span class="status-pill"><span class="status-dot"></span>&hellip;</span></td>
+            <td class="evidence" id="sc-evidence-rpo">Awaiting drill data.</td>
+          </tr>
+          <tr>
+            <td>Restore success rate</td>
+            <td id="sc-status-success"><span class="status-pill"><span class="status-dot"></span>&hellip;</span></td>
+            <td class="evidence" id="sc-evidence-success">Awaiting drill data.</td>
+          </tr>
+          <tr>
+            <td>Automation level</td>
+            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-warning)"></span>Partial &mdash; by design</span></td>
+            <td class="evidence">Backup and restore-testing run entirely on AWS-managed schedules with no human step. The recovery workflow runs fully unattended once dispatched (Terraform re-apply, RDS restore, smoke check, DNS cutover, result recorded). Only the dispatch itself is manual &mdash; a deliberate one-click human decision point before cutover, not an automation gap.</td>
+          </tr>
+          <tr>
+            <td>Backup protection</td>
+            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-warning)"></span>Configured, not enabled</span></td>
+            <td class="evidence">Vault Lock (governance mode) is implemented in Terraform for both the primary and DR vaults, but disabled in the running testbed because it's torn down on a recurring schedule to bound cost, which needs recovery points deletable on demand.</td>
+          </tr>
+          <tr>
+            <td>Monitoring &amp; auditability</td>
+            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
+            <td class="evidence">CloudWatch alarms on EC2 status checks, RDS free storage, and AWS Backup job/copy/restore state, alerting a per-region SNS topic. A single multi-region CloudTrail trail logs every backup, restore, and configuration change.</td>
+          </tr>
+          <tr>
+            <td>Cost</td>
+            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-warning)"></span>Bounded, not instrumented</span></td>
+            <td class="evidence">The DR region holds only a backup vault during normal operation, not standing infrastructure, and the whole testbed is destroyed between test runs to bound spend &mdash; but no live cost figure is pulled onto this dashboard yet.</td>
+          </tr>
+          <tr>
+            <td>Infrastructure reproducibility</td>
+            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
+            <td class="evidence">Every drill re-applies the exact Terraform that provisions the primary environment against the DR region instead of a separate recovery procedure, and the primary environment itself is destroyed and rebuilt from code on a recurring schedule.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
   <section class="result-group" id="section-env">
     <h2>Full DR Failover Drills</h2>
@@ -477,9 +550,50 @@
     buildLineChart(document.getElementById(ids.chartRpo), rpoPoints, css("--series-rpo"));
   }
 
+  function setScorecardStatus(cellId, kind, label) {
+    const color = kind === "good" ? css("--status-good") : kind === "warning" ? css("--status-warning") : css("--status-critical");
+    document.getElementById(cellId).innerHTML =
+      '<span class="status-pill"><span class="status-dot" style="background:' + color + '"></span>' + label + "</span>";
+  }
+
+  function renderScorecard(history) {
+    const envDrills = history.filter(function (r) { return r.resource_type === "ENV"; })
+      .slice().sort(function (a, b) { return new Date(a.failure_triggered_at) - new Date(b.failure_triggered_at); });
+
+    if (envDrills.length) {
+      const latest = envDrills[envDrills.length - 1];
+      setScorecardStatus("sc-status-rto", "good", "Measured");
+      document.getElementById("sc-evidence-rto").textContent =
+        "Latest full failover drill recovered in " + formatDuration(latest.rto_seconds) +
+        " (" + envDrills.length + " drill" + (envDrills.length === 1 ? "" : "s") + " recorded).";
+      setScorecardStatus("sc-status-rpo", "good", "Measured");
+      document.getElementById("sc-evidence-rpo").textContent =
+        "Recovery point restored from in the latest drill was " + formatDuration(latest.rpo_seconds) + " old at failure time.";
+    } else {
+      setScorecardStatus("sc-status-rto", "warning", "Not yet measured");
+      document.getElementById("sc-evidence-rto").textContent = "No full failover drill recorded yet — trigger dr_failover.yml to populate this.";
+      setScorecardStatus("sc-status-rpo", "warning", "Not yet measured");
+      document.getElementById("sc-evidence-rpo").textContent = "No full failover drill recorded yet — trigger dr_failover.yml to populate this.";
+    }
+
+    const total = history.length;
+    if (total) {
+      const successes = history.filter(function (r) { return r.success; }).length;
+      const rate = Math.round((successes / total) * 100);
+      const kind = rate === 100 ? "good" : rate >= 50 ? "warning" : "critical";
+      setScorecardStatus("sc-status-success", kind, rate + "%");
+      document.getElementById("sc-evidence-success").textContent =
+        successes + " of " + total + " recorded restore attempts succeeded, combining full failover drills and AWS Backup's own restore-testing plan.";
+    } else {
+      setScorecardStatus("sc-status-success", "warning", "Not yet measured");
+      document.getElementById("sc-evidence-success").textContent = "No drills or restore tests recorded yet.";
+    }
+  }
+
   fetch("data/history.json")
     .then(function (r) { return r.json(); })
     .then(function (history) {
+      renderScorecard(Array.isArray(history) ? history : []);
       if (!Array.isArray(history) || history.length === 0) {
         document.getElementById("empty-all").hidden = false;
         document.getElementById("empty-env").hidden = false;
