@@ -1,11 +1,5 @@
 name: "Record AWS Cost"
 
-# Cost Explorer's numbers settle roughly a day behind actual spend, so
-# polling more often than daily wouldn't show anything new - a scheduled
-# poll here plus workflow_dispatch for an on-demand refresh (e.g. right
-# after a demo session) covers it. Uses the "development" environment like
-# the other manual/scheduled pollers in this repo, since Cost Explorer isn't
-# tied to a specific region or stack.
 on:
   schedule:
     - cron: '30 6 * * *' # once a day, well clear of the destroy/backup schedules
