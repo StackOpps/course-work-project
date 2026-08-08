@@ -17,9 +17,9 @@ variable "dr_region" {
 }
 
 variable "backup_vault_lock_min_retention_days" {
-  description = "Vault Lock minimum retention period recovery points must be kept for, in days"
+  description = "Vault Lock minimum retention period recovery points must be kept for, in days. Set to AWS's 1-day floor so the lock is real (nothing, including root, can delete a recovery point before it passes) without permanently blocking this testbed's teardown."
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "backup_vault_lock_max_retention_days" {

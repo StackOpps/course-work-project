@@ -1,0 +1,48 @@
+name: "Record AWS Cost"
+
+# Cost Explorer's numbers settle roughly a day behind actual spend, so
+# polling more often than daily wouldn't show anything new - a scheduled
+# poll here plus workflow_dispatch for an on-demand refresh (e.g. right
+# after a demo session) covers it. Uses the "development" environment like
+# the other manual/scheduled pollers in this repo, since Cost Explorer isn't
+# tied to a specific region or stack.
+on:
+  schedule:
+    - cron: '30 6 * * *' # once a day, well clear of the destroy/backup schedules
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install script dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pull month-to-date cost from Cost Explorer
+        run: python scripts/record_cost.py --days 14 --top 5
+
+      - name: Publish to the dashboard if anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- docs/data/cost.json; then
+            echo "No change in cost data"
+            exit 0
+          fi
+          git add docs/data/cost.json
+          git commit -m "Record AWS cost snapshot [skip ci]"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"

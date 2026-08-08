@@ -19,6 +19,7 @@
     --border:          rgba(11,11,11,0.10);
     --series-rto:      #2a78d6;
     --series-rpo:      #008300;
+    --series-cost:     #7c3aed;
     --status-good:     #0ca30c;
     --status-warning:  #fab219;
     --status-critical: #d03b3b;
@@ -36,6 +37,7 @@
       --border:          rgba(255,255,255,0.10);
       --series-rto:      #3987e5;
       --series-rpo:      #008300;
+      --series-cost:     #a78bfa;
       --status-good:     #0ca30c;
       --status-warning:  #fab219;
       --status-critical: #d03b3b;
@@ -53,6 +55,7 @@
     --border:          rgba(255,255,255,0.10);
     --series-rto:      #3987e5;
     --series-rpo:      #008300;
+    --series-cost:     #a78bfa;
     --status-good:     #0ca30c;
     --status-warning:  #fab219;
     --status-critical: #d03b3b;
@@ -236,11 +239,11 @@
     <h1>CraftHaven — Disaster Recovery Metrics</h1>
     <p>
       Two independent sources feed this page: full-environment failover
-      drills from <code>dr_failover.yml</code> (automated via the Route&nbsp;53
-      health check, or manual), and AWS Backup's own native restore-testing
-      plan (<code>restore_testing/</code>), polled in separately since it runs
-      on AWS's internal schedule. See Dissertation §3.4 for how these map to
-      the evaluation criteria.
+      drills from <code>dr_failover.yml</code> (manually dispatched — see
+      Chapter 5 for why this isn't automated yet), and AWS Backup's own
+      native restore-testing plan (<code>restore_testing/</code>), polled in
+      separately since it runs on AWS's internal schedule. See Dissertation
+      §3.4 for how these map to the evaluation criteria.
     </p>
   </header>
 
@@ -253,11 +256,11 @@
   <section class="result-group" id="section-scorecard">
     <h2>Evaluation Scorecard</h2>
     <p class="section-sub">
-      Every row maps directly onto Dissertation &sect;3.4. The first three are
-      computed live from <code>history.json</code> below; the rest are the
-      design's current status against that same criteria table &mdash; shown
-      honestly rather than inferred from the drill data, since they aren't
-      measurable that way.
+      Every row maps directly onto Dissertation &sect;3.4. RTO, RPO, restore
+      success rate and cost are computed live from <code>history.json</code>
+      and <code>cost.json</code> below; the rest are the design's current
+      status against that same criteria table &mdash; shown honestly rather
+      than inferred from data, since they aren't measurable that way.
     </p>
     <div class="table-scroll">
       <table class="scorecard-table">
@@ -287,8 +290,8 @@
           </tr>
           <tr>
             <td>Backup protection</td>
-            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-warning)"></span>Configured, not enabled</span></td>
-            <td class="evidence">Vault Lock (governance mode) is implemented in Terraform for both the primary and DR vaults, but disabled in the running testbed because it's torn down on a recurring schedule to bound cost, which needs recovery points deletable on demand.</td>
+            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-good)"></span>Enabled</span></td>
+            <td class="evidence">AWS Backup Vault Lock is enabled in Terraform for both the primary and DR vaults, enforcing a 1-day minimum retention that nobody &mdash; including the account root user &mdash; can delete a recovery point under. The vaults are excluded from the 2-hourly teardown that bounds compute cost and are only destroyed on a manual, opt-in run once that retention window has passed.</td>
           </tr>
           <tr>
             <td>Monitoring &amp; auditability</td>
@@ -297,8 +300,8 @@
           </tr>
           <tr>
             <td>Cost</td>
-            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-warning)"></span>Bounded, not instrumented</span></td>
-            <td class="evidence">The DR region holds only a backup vault during normal operation, not standing infrastructure, and the whole testbed is destroyed between test runs to bound spend &mdash; but no live cost figure is pulled onto this dashboard yet.</td>
+            <td id="sc-status-cost"><span class="status-pill"><span class="status-dot"></span>&hellip;</span></td>
+            <td class="evidence" id="sc-evidence-cost">Awaiting cost data.</td>
           </tr>
           <tr>
             <td>Infrastructure reproducibility</td>
@@ -310,11 +313,34 @@
     </div>
   </section>
 
+  <section class="result-group" id="section-cost">
+    <h2>AWS Cost</h2>
+    <p class="section-sub">
+      Pulled daily from AWS Cost Explorer by <code>record_cost.yml</code> &mdash;
+      whole-account spend, since Cost Explorer isn't scoped per-project. The
+      2-hourly teardown of <code>infra/</code> is what keeps this bounded.
+    </p>
+    <div id="empty-cost" class="empty-state" hidden>
+      No cost data recorded yet &mdash; <code>record_cost.yml</code> polls Cost
+      Explorer daily, or trigger it manually for an on-demand refresh.
+    </div>
+    <div id="body-cost" hidden>
+      <div class="tiles" id="tiles-cost"></div>
+      <div class="charts-row">
+        <figure>
+          <figcaption>Daily spend</figcaption>
+          <div class="subcaption">Whole-account unblended cost per day</div>
+          <div class="chart-scroll"><svg class="chart" id="chart-cost"></svg></div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section class="result-group" id="section-env">
     <h2>Full DR Failover Drills</h2>
     <p class="section-sub">Composite alarm / drill start &rarr; customers redirected to the recovered site.</p>
     <div id="empty-env" class="empty-state" hidden>
-      None recorded yet — trigger <code>dr_failover.yml</code> (Route&nbsp;53 health check, or its <code>workflow_dispatch</code> escape hatch).
+      None recorded yet — trigger <code>dr_failover.yml</code> manually via <code>workflow_dispatch</code>.
     </div>
     <div id="body-env" hidden>
       <div class="tiles" id="tiles-env"></div>
@@ -383,10 +409,11 @@
   <footer>
     Generated from <code>docs/data/history.json</code>, appended to by the
     <code>failover</code> job in <code>dr_failover.yml</code> and by the
-    scheduled <code>record_restore_testing.yml</code> poller. Part of the
-    implementation supporting <em>Evaluating Cost-Effective Disaster
-    Recovery and Backup Strategies for Small Companies Using AWS Cloud
-    Infrastructure</em>.
+    scheduled <code>record_restore_testing.yml</code> poller, plus
+    <code>docs/data/cost.json</code> from the scheduled
+    <code>record_cost.yml</code> poller. Part of the implementation
+    supporting <em>A Cost-Effective, Automated Disaster Recovery and Backup
+    for Small Business AWS Infrastructure</em>.
   </footer>
 </main>
 
@@ -414,6 +441,11 @@
     return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   }
 
+  function formatCurrency(amount) {
+    if (amount === null || amount === undefined) return "—";
+    return "$" + amount.toFixed(2);
+  }
+
   function categoryLabel(resourceType) {
     if (resourceType === "ENV") return "Full failover";
     const kind = resourceType.split(":")[1] || resourceType;
@@ -432,8 +464,9 @@
     return step * magnitude;
   }
 
-  function buildLineChart(svgEl, points, color) {
+  function buildLineChart(svgEl, points, color, formatValue) {
     // points: [{y: number|null, label: string}]
+    formatValue = formatValue || formatDuration;
     const width = Math.max(320, points.length * 64 + 80);
     const height = 200;
     const padL = 46, padR = 20, padT = 16, padB = 34;
@@ -468,7 +501,7 @@
       const y = yAt(v);
       svgEl.appendChild(el("line", { x1: padL, x2: width - padR, y1: y, y2: y, class: "gridline" }));
       const label = el("text", { x: padL - 8, y: y + 3, class: "axis-label", "text-anchor": "end" });
-      label.textContent = formatDuration(v);
+      label.textContent = formatValue(v);
       svgEl.appendChild(label);
     }
     svgEl.appendChild(el("line", { x1: padL, x2: width - padR, y1: padT + plotH, y2: padT + plotH, class: "baseline" }));
@@ -490,7 +523,7 @@
       const i = points.indexOf(p);
       const ring = el("circle", { cx: xAt(i), cy: yAt(p.y), r: 6, fill: color, class: "point-ring" });
       const title = el("title", {});
-      title.textContent = p.label + " — " + formatDuration(p.y);
+      title.textContent = p.label + " — " + formatValue(p.y);
       ring.appendChild(title);
       svgEl.appendChild(ring);
     });
@@ -499,7 +532,7 @@
       const last = known[known.length - 1];
       const i = points.indexOf(last);
       const label = el("text", { x: xAt(i) + 10, y: yAt(last.y) - 8, class: "end-label" });
-      label.textContent = formatDuration(last.y);
+      label.textContent = formatValue(last.y);
       svgEl.appendChild(label);
     }
   }
@@ -548,6 +581,40 @@
     const rpoPoints = records.map(function (r) { return { y: r.rpo_seconds, label: formatDate(r.failure_triggered_at) }; });
     buildLineChart(document.getElementById(ids.chartRto), rtoPoints, css("--series-rto"));
     buildLineChart(document.getElementById(ids.chartRpo), rpoPoints, css("--series-rpo"));
+  }
+
+  function renderCostSection(cost) {
+    const emptyEl = document.getElementById("empty-cost");
+    const bodyEl = document.getElementById("body-cost");
+    if (!cost || !cost.daily || cost.daily.length === 0) {
+      emptyEl.hidden = false;
+      bodyEl.hidden = true;
+      setScorecardStatus("sc-status-cost", "warning", "Not yet polled");
+      document.getElementById("sc-evidence-cost").textContent =
+        "Cost Explorer hasn't been polled yet — record_cost.yml runs daily, or trigger it manually.";
+      return;
+    }
+    emptyEl.hidden = true;
+    bodyEl.hidden = false;
+
+    const days = cost.daily.length;
+    const dailyAvg = cost.total_cost / days;
+    const topService = cost.by_service && cost.by_service[0];
+
+    const tilesEl = document.getElementById("tiles-cost");
+    tilesEl.innerHTML = "";
+    tile(tilesEl, "Total (last " + days + " days)", formatCurrency(cost.total_cost));
+    tile(tilesEl, "Daily average", formatCurrency(dailyAvg));
+    tile(tilesEl, "Top service", topService ? topService.service + " (" + formatCurrency(topService.amount) + ")" : "—");
+    tile(tilesEl, "Last polled", new Date(cost.as_of).toLocaleString());
+
+    const points = cost.daily.map(function (d) { return { y: d.amount, label: formatDate(d.date) }; });
+    buildLineChart(document.getElementById("chart-cost"), points, css("--series-cost"), formatCurrency);
+
+    setScorecardStatus("sc-status-cost", "good", "Measured");
+    document.getElementById("sc-evidence-cost").textContent =
+      formatCurrency(cost.total_cost) + " whole-account spend over the last " + days + " day" + (days === 1 ? "" : "s") +
+      " (AWS Cost Explorer, polled daily)" + (topService ? " — top service: " + topService.service + " (" + formatCurrency(topService.amount) + ")." : ".");
   }
 
   function setScorecardStatus(cellId, kind, label) {
@@ -636,6 +703,14 @@
       document.getElementById("empty-env").hidden = false;
       document.getElementById("empty-restore").hidden = false;
     });
+
+  // Independent of history.json above — cost.json is written by a separate
+  // poller (record_cost.yml) on its own daily schedule, so its absence
+  // shouldn't block the drill/restore-test sections from rendering.
+  fetch("data/cost.json")
+    .then(function (r) { return r.json(); })
+    .then(renderCostSection)
+    .catch(function () { renderCostSection(null); });
 })();
 </script>
 </body>

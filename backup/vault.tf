@@ -18,29 +18,28 @@ resource "aws_backup_vault" "dr" {
   name     = "${local.name}-dr-vault"
 }
 
-# # Same protection as the primary vault (Section 3.2): recovery points copied
-# # here can't be deleted or shortened until the retention window passes.
-# resource "aws_backup_vault_lock_configuration" "dr" {
-#   provider            = aws.dr
-#   backup_vault_name   = aws_backup_vault.dr.name
-#   min_retention_days  = var.backup_vault_lock_min_retention_days
-#   max_retention_days  = var.backup_vault_lock_max_retention_days
-#   changeable_for_days = var.backup_vault_lock_changeable_for_days
-# }
+
+resource "aws_backup_vault_lock_configuration" "dr" {
+  provider            = aws.dr
+  backup_vault_name   = aws_backup_vault.dr.name
+  min_retention_days  = var.backup_vault_lock_min_retention_days
+  max_retention_days  = var.backup_vault_lock_max_retention_days
+  changeable_for_days = var.backup_vault_lock_changeable_for_days
+}
 
 resource "aws_backup_vault" "primary" {
   provider = aws.primary
   name     = "${local.name}-vault"
 }
 
-# resource "aws_backup_vault_lock_configuration" "main" {
-#   provider = aws.primary
+resource "aws_backup_vault_lock_configuration" "main" {
+  provider = aws.primary
 
-#   backup_vault_name   = aws_backup_vault.primary.name
-#   min_retention_days  = var.backup_vault_lock_min_retention_days
-#   max_retention_days  = var.backup_vault_lock_max_retention_days
-#   changeable_for_days = var.backup_vault_lock_changeable_for_days
-# }
+  backup_vault_name   = aws_backup_vault.primary.name
+  min_retention_days  = var.backup_vault_lock_min_retention_days
+  max_retention_days  = var.backup_vault_lock_max_retention_days
+  changeable_for_days = var.backup_vault_lock_changeable_for_days
+}
 
 resource "aws_iam_role" "backup" {
   provider = aws.primary
@@ -82,12 +81,6 @@ resource "aws_backup_plan" "main" {
       delete_after = var.backup_retention_days
     }
 
-    # Every recovery point is copied into the DR-region vault as soon as it's
-    # created, so restores never depend on the primary region being healthy
-    # (Section 3.3: "recovery points ... automatically copied to a second
-    # locked vault in the DR region"). Both vaults live in this same stack
-    # now, so the destination is just a direct resource reference — no need
-    # to reconstruct the ARN from account_id/name across a state boundary.
     copy_action {
       destination_vault_arn = aws_backup_vault.dr.arn
 

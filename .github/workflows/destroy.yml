@@ -2,8 +2,14 @@ name: "Destroy Infrastructure"
 
 on:
   workflow_dispatch:
+    inputs:
+      Destroy-Backup:
+        description: "Also destroy backup/ (its vaults are Vault Lock-protected — this fails until a recovery point's 1-day minimum retention has passed)"
+        required: true
+        type: boolean
+        default: false
   schedule:
-    - cron: '1/2 * * * *' # Run every 2 hours
+    - cron: '1 */2 * * *' # Run every 2 hours, bounding cost on infra/ (EC2/RDS/ALB) and restore_testing/
 
 permissions:
   id-token: write
@@ -52,8 +58,16 @@ jobs:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
 
+  # Not part of the scheduled 2-hourly teardown above: backup/'s vaults are
+  # Vault Lock-protected (backup/vault.tf), so emptying them before their
+  # recovery points' 1-day minimum retention has passed would just fail. The
+  # vaults hold nothing but backup storage, not compute, so leaving them up
+  # between runs doesn't meaningfully add to what infra/'s 2-hourly teardown
+  # already bounds - this only runs on an explicit manual opt-in once that
+  # retention window has actually elapsed.
   terraform-destroy-backup:
       uses: ./.github/workflows/_terraform.yml
+      if: ${{ inputs.Destroy-Backup }}
       needs: [terraform-destroy-infra, terraform-destroy-restore-testing]
       with:
         working-directory: backup/
