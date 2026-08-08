@@ -2,17 +2,6 @@
   {
     "resource_type": "ENV",
     "resource_id": "shop.crafthavens.com",
-    "failure_triggered_at": "2026-08-07T13:12:47Z",
-    "recovery_completed_at": "2026-08-07T13:13:03.289571+00:00",
-    "rto_seconds": 16.289571,
-    "rpo_seconds": 2746.0,
-    "restore_job_id": null,
-    "success": true,
-    "notes": "Manual DR failover drill"
-  },
-  {
-    "resource_type": "ENV",
-    "resource_id": "shop.crafthavens.com",
     "failure_triggered_at": "2026-08-08T12:37:47Z",
     "recovery_completed_at": "2026-08-08T12:48:59.525853+00:00",
     "rto_seconds": 672.525853,
