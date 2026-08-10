@@ -1,11 +1,3 @@
-# AWS Backup's native restore-testing feature: regularly restores a sample
-# recovery point and reports whether it succeeded, independent of the full
-# dr_failover.yml drill. AWS Backup builds the restore's metadata itself
-# from the recovery point (target identifier, instance class, networking),
-# so unlike a hand-rolled restore script there's no Metadata document to
-# get wrong. Kept as its own root module so its restore jobs can never
-# create a dependency cycle with infra/'s backup plan (infra creates the
-# vault and recovery points; this stack only reads them by ARN convention).
 
 locals {
   name = "${var.project_name}-${var.environment}"
@@ -24,7 +16,7 @@ resource "aws_backup_restore_testing_plan" "main" {
     algorithm             = "LATEST_WITHIN_WINDOW"
     include_vaults        = [local.dr_vault_arn]
     recovery_point_types  = ["SNAPSHOT"]
-    selection_window_days = 7
+    selection_window_days = 1
   }
 }
 

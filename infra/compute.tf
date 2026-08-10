@@ -236,15 +236,18 @@ NGINXCONF
 systemctl enable --now nginx
 
 if dnf install -y php php-fpm php-pdo php-mysqlnd; then
-  # DB_PASSWORD is base64-encoded here and decoded in db.php: it may contain
-  # ini-special characters (e.g. ~, ", ;) that would otherwise break parsing
-  # of this whole file if the raw password were interpolated unquoted.
+  # DB_PASSWORD is base64-encoded here and decoded in db.php since it may
+  # contain ini-special characters. The value is still double-quoted below:
+  # base64's own alphabet (+, /, and trailing = padding) contains '=', and
+  # php-fpm's ini parser rejects an unquoted value containing '=' outright
+  # ("syntax error, unexpected '=' in Unknown on line 1"), which previously
+  # made php-fpm.service fail to start on every boot regardless of password.
   cat >> /etc/php-fpm.d/www.conf <<'PHPENV'
 
-env[DB_HOST] = ${aws_db_instance.main.address}
-env[DB_NAME] = ${var.db_name}
-env[DB_USER] = ${var.db_username}
-env[DB_PASSWORD_B64] = ${base64encode(var.db_password)}
+env[DB_HOST] = "${aws_db_instance.main.address}"
+env[DB_NAME] = "${var.db_name}"
+env[DB_USER] = "${var.db_username}"
+env[DB_PASSWORD_B64] = "${base64encode(var.db_password)}"
 PHPENV
   sed -i 's/^listen = .*/listen = 127.0.0.1:9000/' /etc/php-fpm.d/www.conf
   systemctl enable --now php-fpm

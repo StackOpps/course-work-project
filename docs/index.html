@@ -118,6 +118,11 @@
     margin-bottom: 16px;
   }
 
+  .hero-stats { margin-bottom: 36px; }
+  .hero-stats .tile { padding: 18px 20px 20px; }
+  .hero-stats .value { font-size: 2.1rem; }
+  .hero-sub { font-size: 0.76rem; color: var(--text-muted); margin: 4px 0 0; }
+
   .scorecard-table th:first-child, .scorecard-table td:first-child { width: 15%; }
   .scorecard-table th:nth-child(2), .scorecard-table td:nth-child(2) { width: 18%; }
   .scorecard-table tbody tr td:first-child { border-left: 3px solid transparent; }
@@ -281,12 +286,35 @@
   <header>
     <h1>CraftHaven — Disaster Recovery Metrics</h1>
     <p>
-      Two independent sources feed this page: full-environment failover
-      drills from <code>dr_failover.yml</code> (manually dispatched) and AWS Backup's own
-      native restore-testing plan (<code>restore_testing/</code>), polled in
-      separately since it runs on AWS's internal schedule.
+      Manual full-environment failover drills, plus AWS Backup's native
+      restore-testing plan running on its own schedule.
     </p>
   </header>
+
+  <section class="hero-stats" aria-label="Headline metrics">
+    <div class="tiles">
+      <div class="tile accent-rto" id="hero-rto">
+        <p class="label">RTO</p>
+        <p class="value">&hellip;</p>
+        <p class="hero-sub">Latest failover drill</p>
+      </div>
+      <div class="tile accent-rpo" id="hero-rpo">
+        <p class="label">RPO</p>
+        <p class="value">&hellip;</p>
+        <p class="hero-sub">Recovery point age</p>
+      </div>
+      <div class="tile" id="hero-success">
+        <p class="label">Restore success</p>
+        <p class="value">&hellip;</p>
+        <p class="hero-sub">All recorded attempts</p>
+      </div>
+      <div class="tile accent-cost" id="hero-cost">
+        <p class="label">14-day cost</p>
+        <p class="value">&hellip;</p>
+        <p class="hero-sub">Whole-account spend</p>
+      </div>
+    </div>
+  </section>
 
   <div id="empty-all" class="empty-state" hidden>
     No drills or restore tests recorded yet. Trigger <code>dr_failover.yml</code>
@@ -296,11 +324,7 @@
 
   <section class="result-group" id="section-scorecard">
     <h2>Evaluation Scorecard</h2>
-    <p class="section-sub">
-      Every row maps directly to the evaluation criteria: RTO, RPO, restore
-      success rate and cost are computed live from <code>history.json</code>
-      and <code>cost.json</code> below.
-    </p>
+    <p class="section-sub">Live evidence for each evaluation criterion.</p>
     <div class="table-scroll">
       <table class="scorecard-table">
         <thead>
@@ -325,17 +349,17 @@
           <tr>
             <td>Automation level</td>
             <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>99%</span></td>
-            <td class="evidence">Backup and restore-testing run entirely on AWS-managed schedules with no human step. The recovery workflow runs fully unattended once dispatched (Terraform re-apply, RDS restore, smoke check, DNS cutover, result recorded). Only the dispatch itself is manual which is a deliberate one-click human decision point before cutover, not an automation gap.</td>
+            <td class="evidence" title="Only the initial dispatch is manual — a deliberate go/no-go decision before cutover, not an automation gap.">Unattended after dispatch: re-apply, restore, smoke check, DNS cutover, result — all automatic.</td>
           </tr>
           <tr>
             <td>Backup protection</td>
             <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>Enabled</span></td>
-            <td class="evidence">AWS Backup Vault Lock is enabled in Terraform for both the primary and DR vaults.</td>
+            <td class="evidence">Vault Lock enabled on both the primary and DR vaults.</td>
           </tr>
           <tr>
             <td>Monitoring &amp; auditability</td>
             <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
-            <td class="evidence">CloudWatch alarms on EC2 status checks, RDS free storage, and AWS Backup job/copy/restore state, alerting a per-region SNS topic. A single multi-region CloudTrail trail logs every backup, restore, and configuration change.</td>
+            <td class="evidence" title="CloudWatch alarms on EC2 status checks, RDS free storage, and AWS Backup job/copy/restore state, alerting a per-region SNS topic.">CloudWatch alarms + a multi-region CloudTrail log every change.</td>
           </tr>
           <tr>
             <td>Cost</td>
@@ -345,7 +369,7 @@
           <tr>
             <td>Infrastructure reproducibility</td>
             <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
-            <td class="evidence">Every drill re-applies the exact Terraform that provisions the primary environment against the DR region instead of a separate recovery procedure.</td>
+            <td class="evidence" title="Every drill re-applies the exact Terraform that provisions the primary environment, instead of a separate recovery procedure.">Same Terraform provisions primary and DR — no separate recovery procedure.</td>
           </tr>
         </tbody>
       </table>
@@ -354,10 +378,7 @@
 
   <section class="result-group" id="section-cost">
     <h2><span class="fig-swatch" style="background:var(--series-cost)"></span>AWS Cost</h2>
-    <p class="section-sub">
-      Pulled daily from AWS Cost Explorer by <code>record_cost.yml</code>, showing
-      whole-account spend since Cost Explorer isn't scoped per-project.
-    </p>
+    <p class="section-sub">Whole-account spend, pulled daily from Cost Explorer.</p>
     <div id="empty-cost" class="empty-state" hidden>
       No cost data recorded yet <code>record_cost.yml</code> polls Cost
       Explorer daily, or trigger it manually for an on-demand refresh.
@@ -399,10 +420,7 @@
 
   <section class="result-group" id="section-restore">
     <h2>AWS Backup Restore Tests</h2>
-    <p class="section-sub">
-      Native AWS Backup restore-testing (<code>restore_testing/</code>) — single-resource
-      restores AWS runs and validates on its own hourly schedule, independent of any failure.
-    </p>
+    <p class="section-sub">Single-resource restores, run and validated on AWS's own schedule.</p>
     <div id="empty-restore" class="empty-state" hidden>
       None recorded yet — <code>restore_testing/</code>'s plan hasn't completed a run,
       or <code>record_restore_testing.yml</code> hasn't polled since it did.
@@ -445,13 +463,9 @@
   </div>
 
   <footer>
-    Generated from <code>docs/data/history.json</code>, appended to by the
-    <code>failover</code> job in <code>dr_failover.yml</code> and by the
-    scheduled <code>record_restore_testing.yml</code> poller, plus
-    <code>docs/data/cost.json</code> from the scheduled
-    <code>record_cost.yml</code> poller. Part of the implementation
-    supporting <em>A Cost-Effective, Automated Disaster Recovery and Backup
-    for Small Business AWS Infrastructure</em>.
+    Generated from <code>history.json</code> and <code>cost.json</code>, updated by
+    scheduled GitHub Actions pollers. Part of <em>A Cost-Effective, Automated
+    Disaster Recovery and Backup for Small Business AWS Infrastructure</em>.
   </footer>
 </main>
 
@@ -575,6 +589,11 @@
     }
   }
 
+  function setHeroStat(id, value) {
+    const el = document.querySelector("#" + id + " .value");
+    if (el) el.textContent = value;
+  }
+
   function tile(container, label, value, statusRow, accent) {
     const t = document.createElement("div");
     t.className = "tile" + (accent ? " accent-" + accent : "");
@@ -628,8 +647,8 @@
       emptyEl.hidden = false;
       bodyEl.hidden = true;
       setScorecardStatus("sc-status-cost", "warning", "Not yet polled");
-      document.getElementById("sc-evidence-cost").textContent =
-        "Cost Explorer hasn't been polled yet — record_cost.yml runs daily, or trigger it manually.";
+      document.getElementById("sc-evidence-cost").textContent = "Not yet polled.";
+      setHeroStat("hero-cost", "—");
       return;
     }
     emptyEl.hidden = true;
@@ -650,9 +669,12 @@
     buildLineChart(document.getElementById("chart-cost"), points, css("--series-cost"), formatCurrency);
 
     setScorecardStatus("sc-status-cost", "good", "Measured");
-    document.getElementById("sc-evidence-cost").textContent =
+    document.getElementById("sc-evidence-cost").title =
       formatCurrency(cost.total_cost) + " whole-account spend over the last " + days + " day" + (days === 1 ? "" : "s") +
       " (AWS Cost Explorer, polled daily)" + (topService ? " — top service: " + topService.service + " (" + formatCurrency(topService.amount) + ")." : ".");
+    document.getElementById("sc-evidence-cost").textContent =
+      formatCurrency(cost.total_cost) + " over " + days + "d" + (topService ? " — top: " + topService.service : "");
+    setHeroStat("hero-cost", formatCurrency(cost.total_cost));
   }
 
   function setScorecardStatus(cellId, kind, label) {
@@ -669,16 +691,18 @@
       const latest = envDrills[envDrills.length - 1];
       setScorecardStatus("sc-status-rto", "good", "Measured");
       document.getElementById("sc-evidence-rto").textContent =
-        "Latest full failover drill recovered in " + formatDuration(latest.rto_seconds) +
-        " (" + envDrills.length + " drill" + (envDrills.length === 1 ? "" : "s") + " recorded).";
+        formatDuration(latest.rto_seconds) + " (" + envDrills.length + " drill" + (envDrills.length === 1 ? "" : "s") + ")";
       setScorecardStatus("sc-status-rpo", "good", "Measured");
-      document.getElementById("sc-evidence-rpo").textContent =
-        "Recovery point restored from in the latest drill was " + formatDuration(latest.rpo_seconds) + " old at failure time.";
+      document.getElementById("sc-evidence-rpo").textContent = formatDuration(latest.rpo_seconds) + " old at failure time";
+      setHeroStat("hero-rto", formatDuration(latest.rto_seconds));
+      setHeroStat("hero-rpo", formatDuration(latest.rpo_seconds));
     } else {
       setScorecardStatus("sc-status-rto", "warning", "Not yet measured");
-      document.getElementById("sc-evidence-rto").textContent = "No full failover drill recorded yet — trigger dr_failover.yml to populate this.";
+      document.getElementById("sc-evidence-rto").textContent = "No drill recorded yet.";
       setScorecardStatus("sc-status-rpo", "warning", "Not yet measured");
-      document.getElementById("sc-evidence-rpo").textContent = "No full failover drill recorded yet — trigger dr_failover.yml to populate this.";
+      document.getElementById("sc-evidence-rpo").textContent = "No drill recorded yet.";
+      setHeroStat("hero-rto", "—");
+      setHeroStat("hero-rpo", "—");
     }
 
     const total = history.length;
@@ -687,11 +711,12 @@
       const rate = Math.round((successes / total) * 100);
       const kind = rate === 100 ? "good" : rate >= 50 ? "warning" : "critical";
       setScorecardStatus("sc-status-success", kind, rate + "%");
-      document.getElementById("sc-evidence-success").textContent =
-        successes + " of " + total + " recorded restore attempts succeeded, combining full failover drills and AWS Backup's own restore-testing plan.";
+      document.getElementById("sc-evidence-success").textContent = successes + " of " + total + " restore attempts succeeded";
+      setHeroStat("hero-success", rate + "%");
     } else {
       setScorecardStatus("sc-status-success", "warning", "Not yet measured");
       document.getElementById("sc-evidence-success").textContent = "No drills or restore tests recorded yet.";
+      setHeroStat("hero-success", "—");
     }
   }
 
