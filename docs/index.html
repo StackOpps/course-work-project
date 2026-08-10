@@ -74,10 +74,20 @@
     margin: 0 auto;
     padding: 32px 20px 64px;
   }
+  header::before {
+    content: "";
+    display: block;
+    width: 56px;
+    height: 4px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+    background: linear-gradient(90deg, var(--series-rto), var(--series-rpo) 50%, var(--series-cost));
+  }
   header h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin: 0 0 4px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
   }
   header p {
     color: var(--text-secondary);
@@ -110,6 +120,7 @@
 
   .scorecard-table th:first-child, .scorecard-table td:first-child { width: 15%; }
   .scorecard-table th:nth-child(2), .scorecard-table td:nth-child(2) { width: 18%; }
+  .scorecard-table tbody tr td:first-child { border-left: 3px solid transparent; }
   .status-pill {
     display: inline-flex;
     align-items: center;
@@ -117,15 +128,32 @@
     font-size: 0.82rem;
     font-weight: 600;
     white-space: nowrap;
+    padding: 3px 10px 3px 7px;
+    border-radius: 999px;
+    color: var(--text-primary);
+    background: var(--pill-bg, transparent);
+    border: 1px solid var(--pill-border, transparent);
   }
   .status-pill .status-dot { width: 8px; height: 8px; }
+  .status-pill.kind-good     { --pill-bg: color-mix(in srgb, var(--status-good) 14%, transparent);     --pill-border: color-mix(in srgb, var(--status-good) 38%, transparent); }
+  .status-pill.kind-warning  { --pill-bg: color-mix(in srgb, var(--status-warning) 20%, transparent);  --pill-border: color-mix(in srgb, var(--status-warning) 48%, transparent); }
+  .status-pill.kind-critical { --pill-bg: color-mix(in srgb, var(--status-critical) 14%, transparent); --pill-border: color-mix(in srgb, var(--status-critical) 38%, transparent); }
+  .scorecard-table tbody tr:has(.kind-good) td:first-child     { border-left-color: var(--status-good); }
+  .scorecard-table tbody tr:has(.kind-warning) td:first-child  { border-left-color: var(--status-warning); }
+  .scorecard-table tbody tr:has(.kind-critical) td:first-child { border-left-color: var(--status-critical); }
   td.evidence { white-space: normal; color: var(--text-secondary); line-height: 1.5; }
   .tile {
     background: var(--surface-1);
     border: 1px solid var(--border);
+    border-top: 3px solid transparent;
     border-radius: 10px;
-    padding: 16px 18px;
+    padding: 14px 18px 16px;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
   }
+  .tile:hover { box-shadow: 0 4px 14px rgba(11,11,11,0.07); transform: translateY(-1px); }
+  .tile.accent-rto  { border-top-color: var(--series-rto); }
+  .tile.accent-rpo  { border-top-color: var(--series-rpo); }
+  .tile.accent-cost { border-top-color: var(--series-cost); }
   .tile .label {
     font-size: 0.8rem;
     color: var(--text-secondary);
@@ -149,6 +177,14 @@
     flex: none;
     display: inline-block;
   }
+  .fig-swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 7px;
+    vertical-align: middle;
+  }
 
   .charts-row {
     display: grid;
@@ -161,8 +197,12 @@
     border-radius: 10px;
     margin: 0;
     padding: 18px 18px 8px;
+    transition: box-shadow 0.15s ease;
   }
+  figure:hover { box-shadow: 0 4px 14px rgba(11,11,11,0.07); }
   figure figcaption {
+    display: flex;
+    align-items: center;
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-primary);
@@ -182,8 +222,9 @@
   .point-ring { stroke: var(--surface-1); stroke-width: 2; }
 
   .empty-state {
-    background: var(--surface-1);
-    border: 1px dashed var(--border);
+    background: color-mix(in srgb, var(--status-warning) 6%, var(--surface-1));
+    border: 1px solid var(--border);
+    border-left: 3px solid color-mix(in srgb, var(--status-warning) 55%, transparent);
     border-radius: 10px;
     padding: 24px 20px;
     color: var(--text-secondary);
@@ -223,6 +264,8 @@
   td.num { font-variant-numeric: tabular-nums; }
   td.notes { white-space: normal; color: var(--text-secondary); }
   .table-scroll { overflow-x: auto; }
+  #table-wrap tbody tr:nth-child(even) { background: color-mix(in srgb, var(--gridline) 40%, transparent); }
+  #table-wrap tbody tr:hover { background: color-mix(in srgb, var(--text-primary) 5%, transparent); }
 
   footer {
     margin-top: 32px;
@@ -281,17 +324,17 @@
           </tr>
           <tr>
             <td>Automation level</td>
-            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-good)"></span>99%</span></td>
+            <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>99%</span></td>
             <td class="evidence">Backup and restore-testing run entirely on AWS-managed schedules with no human step. The recovery workflow runs fully unattended once dispatched (Terraform re-apply, RDS restore, smoke check, DNS cutover, result recorded). Only the dispatch itself is manual which is a deliberate one-click human decision point before cutover, not an automation gap.</td>
           </tr>
           <tr>
             <td>Backup protection</td>
-            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-good)"></span>Enabled</span></td>
+            <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>Enabled</span></td>
             <td class="evidence">AWS Backup Vault Lock is enabled in Terraform for both the primary and DR vaults.</td>
           </tr>
           <tr>
             <td>Monitoring &amp; auditability</td>
-            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
+            <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
             <td class="evidence">CloudWatch alarms on EC2 status checks, RDS free storage, and AWS Backup job/copy/restore state, alerting a per-region SNS topic. A single multi-region CloudTrail trail logs every backup, restore, and configuration change.</td>
           </tr>
           <tr>
@@ -301,7 +344,7 @@
           </tr>
           <tr>
             <td>Infrastructure reproducibility</td>
-            <td><span class="status-pill"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
+            <td><span class="status-pill kind-good"><span class="status-dot" style="background:var(--status-good)"></span>Verified</span></td>
             <td class="evidence">Every drill re-applies the exact Terraform that provisions the primary environment against the DR region instead of a separate recovery procedure.</td>
           </tr>
         </tbody>
@@ -310,7 +353,7 @@
   </section>
 
   <section class="result-group" id="section-cost">
-    <h2>AWS Cost</h2>
+    <h2><span class="fig-swatch" style="background:var(--series-cost)"></span>AWS Cost</h2>
     <p class="section-sub">
       Pulled daily from AWS Cost Explorer by <code>record_cost.yml</code>, showing
       whole-account spend since Cost Explorer isn't scoped per-project.
@@ -323,7 +366,7 @@
       <div class="tiles" id="tiles-cost"></div>
       <div class="charts-row">
         <figure>
-          <figcaption>Daily spend</figcaption>
+          <figcaption><span class="fig-swatch" style="background:var(--series-cost)"></span>Daily spend</figcaption>
           <div class="subcaption">Whole-account unblended cost per day</div>
           <div class="chart-scroll"><svg class="chart" id="chart-cost"></svg></div>
         </figure>
@@ -341,12 +384,12 @@
       <div class="tiles" id="tiles-env"></div>
       <div class="charts-row">
         <figure>
-          <figcaption>RTO</figcaption>
+          <figcaption><span class="fig-swatch" style="background:var(--series-rto)"></span>RTO</figcaption>
           <div class="subcaption">Failure detected &rarr; site recovered</div>
           <div class="chart-scroll"><svg class="chart" id="chart-rto-env"></svg></div>
         </figure>
         <figure>
-          <figcaption>RPO</figcaption>
+          <figcaption><span class="fig-swatch" style="background:var(--series-rpo)"></span>RPO</figcaption>
           <div class="subcaption">Age of the recovery point restored from</div>
           <div class="chart-scroll"><svg class="chart" id="chart-rpo-env"></svg></div>
         </figure>
@@ -368,12 +411,12 @@
       <div class="tiles" id="tiles-restore"></div>
       <div class="charts-row">
         <figure>
-          <figcaption>Restore duration</figcaption>
+          <figcaption><span class="fig-swatch" style="background:var(--series-rto)"></span>Restore duration</figcaption>
           <div class="subcaption">Restore job started &rarr; completed</div>
           <div class="chart-scroll"><svg class="chart" id="chart-rto-restore"></svg></div>
         </figure>
         <figure>
-          <figcaption>Recovery point age</figcaption>
+          <figcaption><span class="fig-swatch" style="background:var(--series-rpo)"></span>Recovery point age</figcaption>
           <div class="subcaption">How old the tested recovery point was when restored</div>
           <div class="chart-scroll"><svg class="chart" id="chart-rpo-restore"></svg></div>
         </figure>
@@ -532,9 +575,9 @@
     }
   }
 
-  function tile(container, label, value, statusRow) {
+  function tile(container, label, value, statusRow, accent) {
     const t = document.createElement("div");
-    t.className = "tile";
+    t.className = "tile" + (accent ? " accent-" + accent : "");
     t.innerHTML = '<p class="label">' + label + "</p>" +
       '<p class="value">' + value + "</p>" +
       (statusRow || "");
@@ -569,8 +612,8 @@
       '<div class="status-row"><span class="status-dot" style="background:' + statusColor + '"></span>' +
         '<span style="color:var(--text-secondary);font-size:0.78rem">' + successes + " of " + total + " succeeded</span></div>"
     );
-    tile(tilesEl, "Latest duration", formatDuration(latest.rto_seconds));
-    tile(tilesEl, "Latest recovery-point age", formatDuration(latest.rpo_seconds));
+    tile(tilesEl, "Latest duration", formatDuration(latest.rto_seconds), null, "rto");
+    tile(tilesEl, "Latest recovery-point age", formatDuration(latest.rpo_seconds), null, "rpo");
 
     const rtoPoints = records.map(function (r) { return { y: r.rto_seconds, label: formatDate(r.failure_triggered_at) }; });
     const rpoPoints = records.map(function (r) { return { y: r.rpo_seconds, label: formatDate(r.failure_triggered_at) }; });
@@ -598,8 +641,8 @@
 
     const tilesEl = document.getElementById("tiles-cost");
     tilesEl.innerHTML = "";
-    tile(tilesEl, "Total (last " + days + " days)", formatCurrency(cost.total_cost));
-    tile(tilesEl, "Daily average", formatCurrency(dailyAvg));
+    tile(tilesEl, "Total (last " + days + " days)", formatCurrency(cost.total_cost), null, "cost");
+    tile(tilesEl, "Daily average", formatCurrency(dailyAvg), null, "cost");
     tile(tilesEl, "Top service", topService ? topService.service + " (" + formatCurrency(topService.amount) + ")" : "—");
     tile(tilesEl, "Last polled", new Date(cost.as_of).toLocaleString());
 
@@ -615,7 +658,7 @@
   function setScorecardStatus(cellId, kind, label) {
     const color = kind === "good" ? css("--status-good") : kind === "warning" ? css("--status-warning") : css("--status-critical");
     document.getElementById(cellId).innerHTML =
-      '<span class="status-pill"><span class="status-dot" style="background:' + color + '"></span>' + label + "</span>";
+      '<span class="status-pill kind-' + kind + '"><span class="status-dot" style="background:' + color + '"></span>' + label + "</span>";
   }
 
   function renderScorecard(history) {
@@ -681,6 +724,7 @@
       history.slice().sort(function (a, b) { return new Date(b.failure_triggered_at) - new Date(a.failure_triggered_at); })
         .forEach(function (r) {
           const tr = document.createElement("tr");
+          const kind = r.success ? "good" : "critical";
           const statusDot = r.success ? css("--status-good") : css("--status-critical");
           tr.innerHTML =
             "<td>" + new Date(r.failure_triggered_at).toLocaleString() + "</td>" +
@@ -688,7 +732,7 @@
             "<td>" + r.resource_id + "</td>" +
             '<td class="num">' + formatDuration(r.rto_seconds) + "</td>" +
             '<td class="num">' + formatDuration(r.rpo_seconds) + "</td>" +
-            '<td><span class="status-dot" style="background:' + statusDot + '"></span> ' + (r.success ? "Success" : "Failed") + "</td>" +
+            '<td><span class="status-pill kind-' + kind + '"><span class="status-dot" style="background:' + statusDot + '"></span>' + (r.success ? "Success" : "Failed") + "</span></td>" +
             '<td class="notes">' + (r.notes || "") + "</td>";
           tbody.appendChild(tr);
         });
