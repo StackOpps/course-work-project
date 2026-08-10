@@ -56,10 +56,27 @@ jobs:
           # once, at boot (see compute.tf user_data). If seed.php landed in
           # the bucket after this instance was already running, it's missing
           # on disk until re-synced — so do that before invoking it.
+          #
+          # DB_HOST/DB_NAME/DB_USER/DB_PASSWORD_B64 are likewise only wired up
+          # for the php-fpm pool (compute.tf's env[...] directives in
+          # www.conf), not for a plain CLI shell, so pull them out of that
+          # ini file before invoking seed.php as a CLI script — otherwise
+          # db.php's getenv() calls return empty and PDO falls back to a
+          # local socket that doesn't exist ("SQLSTATE[HY000] [2002]").
+          cat > params.json <<'PARAMS'
+          {
+            "commands": [
+              "aws s3 sync s3://${{ steps.bucket.outputs.name }} /usr/share/nginx/html",
+              "awk -F'\"' '/^env\\[DB_/{split($1,a,\"[\"); split(a[2],b,\"]\"); print \"export \" b[1] \"=\\\"\" $2 \"\\\"\"}' /etc/php-fpm.d/www.conf > /tmp/crafthaven-db.env",
+              "bash -c 'source /tmp/crafthaven-db.env; php /usr/share/nginx/html/seed.php ${{ inputs.rows }}'"
+            ]
+          }
+          PARAMS
+
           command_id=$(aws ssm send-command \
             --instance-ids "${{ steps.instance.outputs.id }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[\"aws s3 sync s3://${{ steps.bucket.outputs.name }} /usr/share/nginx/html\", \"php /usr/share/nginx/html/seed.php ${{ inputs.rows }}\"]" \
+            --parameters file://params.json \
             --query "Command.CommandId" --output text)
           echo "SSM command $command_id sent"
 
