@@ -74,8 +74,6 @@ resource "aws_s3_object" "site_error" {
   content_type = "text/html"
 }
 
-# PHP app files behind the waitlist form (see compute.tf): a real write path
-# into RDS, so a DR restore has actual data to prove, not just a static page.
 resource "aws_s3_object" "site_db_php" {
   bucket       = aws_s3_bucket.assets.id
   key          = "db.php"
