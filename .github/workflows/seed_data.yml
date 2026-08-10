@@ -36,13 +36,30 @@ jobs:
           fi
           echo "id=$id" >> "$GITHUB_OUTPUT"
 
+      - name: Find the assets bucket
+        id: bucket
+        run: |
+          set -euo pipefail
+          name=$(aws s3api list-buckets \
+            --query "Buckets[?starts_with(Name, 'crafthaven-') && contains(Name, '-assets-')].Name | [0]" \
+            --output text)
+          if [ "$name" == "None" ] || [ -z "$name" ]; then
+            echo "No assets bucket found — deploy infra/ first" >&2
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
       - name: Run seed.php on the instance via SSM
         run: |
           set -euo pipefail
+          # The instance only syncs the assets bucket to /usr/share/nginx/html
+          # once, at boot (see compute.tf user_data). If seed.php landed in
+          # the bucket after this instance was already running, it's missing
+          # on disk until re-synced — so do that before invoking it.
           command_id=$(aws ssm send-command \
             --instance-ids "${{ steps.instance.outputs.id }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[\"php /usr/share/nginx/html/seed.php ${{ inputs.rows }}\"]" \
+            --parameters "commands=[\"aws s3 sync s3://${{ steps.bucket.outputs.name }} /usr/share/nginx/html\", \"php /usr/share/nginx/html/seed.php ${{ inputs.rows }}\"]" \
             --query "Command.CommandId" --output text)
           echo "SSM command $command_id sent"
 

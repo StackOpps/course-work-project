@@ -1,18 +1,5 @@
 name: "Trigger On-Demand Backup + DR Copy"
 
-# Manual escape hatch for demos and rehearsals: the scheduled backup plan
-# (backup/vault.tf) only runs hourly, so data entered on the storefront
-# moments before a live failover run has no recovery point yet. This starts
-# an on-demand backup of the RDS instance and copies it straight into the DR
-# vault, so the very next dr_failover.yml run has that data to restore from.
-#
-# No Terraform resource exists for this on purpose: start-backup-job and
-# start-copy-job are one-shot imperative actions, not desired state, so
-# there's nothing for Terraform to declare or reconcile — the AWS Backup
-# *schedule* is the declarative part, and that's already a real Terraform
-# resource (backup/vault.tf's aws_backup_plan). Plain AWS CLI calls here,
-# same as this repo's other one-shot actions (e.g. destroy.yml emptying a
-# vault before Terraform can destroy it) — no separate script needed.
 on:
   workflow_dispatch: {}
 
