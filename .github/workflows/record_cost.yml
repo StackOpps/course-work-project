@@ -32,7 +32,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- docs/data/cost.json; then
+          if [ -z "$(git status --porcelain -- docs/data/cost.json)" ]; then
             echo "No change in cost data"
             exit 0
           fi
