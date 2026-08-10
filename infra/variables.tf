@@ -85,7 +85,7 @@ variable "db_instance_class" {
 variable "db_allocated_storage" {
   description = "Allocated storage for RDS in GB"
   type        = number
-  default     = 20
+  default     = 60
 }
 
 variable "db_name" {

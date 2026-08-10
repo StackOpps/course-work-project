@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '1 */2 * * *' # Run every 2 hours, bounding cost on infra/ (EC2/RDS/ALB) and restore_testing/
+    - cron: '1 */2 * * *' # Run every 2 hours
 
 permissions:
   id-token: write
@@ -41,13 +41,20 @@ jobs:
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
 
-  # Torn down before backup/ below, since its restore-testing-plan references
-  # the DR vault backup/ manages by ARN convention - not a Terraform
-  # dependency, but destroying in this order avoids leaving a plan pointed at
-  # a vault that's already gone. Same safe-no-op behaviour as the DR infra
-  # job above when nothing's deployed here.
+  # Not part of the scheduled 2-hourly teardown: aws_backup_restore_testing_plan
+  # gets a new AWS-assigned plan ARN every time Terraform recreates it, and
+  # record_restore_testing_results.py looks up jobs against whatever plan
+  # currently exists - destroying and redeploying this on a 2-hourly cycle
+  # orphaned every completed test result, since the poller could never find
+  # jobs recorded under a since-deleted plan's ARN. It's also a lightweight
+  # control-plane resource, not standing compute, so leaving it up between
+  # infra/'s teardown cycles doesn't meaningfully add to the cost this
+  # schedule bounds. Runs on manual opt-in only - folded into Destroy-Backup
+  # since that's the only case it actually needs tearing down first, to avoid
+  # leaving a plan pointed at a vault that's about to be emptied.
   terraform-destroy-restore-testing:
     uses: ./.github/workflows/_terraform.yml
+    if: ${{ inputs.Destroy-Backup }}
     with:
       working-directory: restore_testing/
       Destroy-infra: true
