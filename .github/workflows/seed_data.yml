@@ -1,0 +1,64 @@
+name: "Seed Realistic Data"
+
+on:
+  workflow_dispatch:
+    inputs:
+      rows:
+        description: "Number of fake signups to insert"
+        required: true
+        type: number
+        default: 500
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 15
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
+      AWS_DEFAULT_REGION: eu-west-2
+    steps:
+      - name: Find the running web instance
+        id: instance
+        run: |
+          set -euo pipefail
+          id=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=crafthaven-*-web" "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" --output text)
+          if [ "$id" == "None" ] || [ -z "$id" ]; then
+            echo "No running web instance found — deploy infra/ first" >&2
+            exit 1
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Run seed.php on the instance via SSM
+        run: |
+          set -euo pipefail
+          command_id=$(aws ssm send-command \
+            --instance-ids "${{ steps.instance.outputs.id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[\"php /usr/share/nginx/html/seed.php ${{ inputs.rows }}\"]" \
+            --query "Command.CommandId" --output text)
+          echo "SSM command $command_id sent"
+
+          while :; do
+            status=$(aws ssm get-command-invocation \
+              --command-id "$command_id" --instance-id "${{ steps.instance.outputs.id }}" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+            echo "seed.php: $status"
+            case "$status" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 5
+          done
+
+          aws ssm get-command-invocation \
+            --command-id "$command_id" --instance-id "${{ steps.instance.outputs.id }}" \
+            --query "{stdout:StandardOutputContent,stderr:StandardErrorContent}" --output json
+
+          [ "$status" == "Success" ]

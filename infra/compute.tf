@@ -263,6 +263,7 @@ EOF
     aws_s3_object.site_db_php,
     aws_s3_object.site_signup_php,
     aws_s3_object.site_signups_php,
+    aws_s3_object.site_seed_php,
   ]
 
   root_block_device {

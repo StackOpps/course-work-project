@@ -99,6 +99,17 @@ resource "aws_s3_object" "site_signups_php" {
   etag         = filemd5("${path.module}/site_src/signups.php")
   content_type = "application/x-httpd-php"
 }
+
+# CLI-only seeder for realistic DR-drill data (see seed_data.yml), synced
+# onto the instance the same way as the other PHP files even though it's
+# never served over HTTP.
+resource "aws_s3_object" "site_seed_php" {
+  bucket       = aws_s3_bucket.assets.id
+  key          = "seed.php"
+  source       = "${path.module}/site_src/seed.php"
+  etag         = filemd5("${path.module}/site_src/seed.php")
+  content_type = "application/x-httpd-php"
+}
 # Separate bucket for CloudTrail logs (monitoring.tf) so trail delivery isn't
 # tangled with product-asset lifecycle rules or bucket policy.
 resource "aws_s3_bucket" "cloudtrail" {
