@@ -19,6 +19,9 @@ jobs:
       PRIMARY_VAULT: crafthaven-dev-vault
       DR_VAULT: crafthaven-dev-dr-vault
       BACKUP_ROLE: crafthaven-dev-backup-role
+      # Must stay within the vault lock's min/max retention (backup/variables.tf); an
+      # omitted --lifecycle defaults to indefinite retention, which the lock rejects.
+      RETENTION_DAYS: 7
     steps:
       - name: Start on-demand backup
         id: backup
@@ -31,6 +34,7 @@ jobs:
             --backup-vault-name "$PRIMARY_VAULT" \
             --resource-arn "${{ vars.RDS_RESOURCE_ARN }}" \
             --iam-role-arn "$role_arn" \
+            --lifecycle "DeleteAfterDays=${RETENTION_DAYS}" \
             --query BackupJobId --output text)
           echo "Backup job $job_id started"
 
@@ -60,6 +64,7 @@ jobs:
             --source-backup-vault-name "$PRIMARY_VAULT" \
             --destination-backup-vault-arn "$dest_vault_arn" \
             --iam-role-arn "${{ steps.backup.outputs.role_arn }}" \
+            --lifecycle "DeleteAfterDays=${RETENTION_DAYS}" \
             --query CopyJobId --output text)
           echo "Copy job $job_id started"
 
