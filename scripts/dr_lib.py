@@ -46,7 +46,8 @@ def append_history(result: RecoveryResult, history_path: str = "docs/data/histor
     drill or test so the schema stays in one place."""
     path = Path(history_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    history = json.loads(path.read_text()) if path.exists() else []
+    existing = path.read_text().strip() if path.exists() else ""
+    history = json.loads(existing) if existing else []
     history.append(asdict(result))
     path.write_text(json.dumps(history, indent=2) + "\n")
     return path
