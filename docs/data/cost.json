@@ -1,9 +1,9 @@
 {
-  "as_of": "2026-08-13T08:00:08.437204+00:00",
+  "as_of": "2026-08-13T14:54:29.113187+00:00",
   "unit": "USD",
   "period_start": "2026-07-30",
   "period_end": "2026-08-13",
-  "total_cost": 26.91,
+  "total_cost": 31.59,
   "daily": [
     {
       "date": "2026-07-30",
@@ -15,7 +15,7 @@
     },
     {
       "date": "2026-08-01",
-      "amount": 4.98
+      "amount": 6.07
     },
     {
       "date": "2026-08-02",
@@ -59,29 +59,29 @@
     },
     {
       "date": "2026-08-12",
-      "amount": 4.92
+      "amount": 8.52
     }
   ],
   "by_service": [
     {
       "service": "Amazon Relational Database Service",
-      "amount": 12.02
+      "amount": 14.56
+    },
+    {
+      "service": "Tax",
+      "amount": 5.57
     },
     {
       "service": "AWS Backup",
       "amount": 4.5
     },
     {
-      "service": "Tax",
-      "amount": 4.48
-    },
-    {
       "service": "EC2 - Other",
-      "amount": 2.88
+      "amount": 3.4
     },
     {
       "service": "Amazon Elastic Load Balancing",
-      "amount": 1.27
+      "amount": 1.53
     }
   ]
 }
