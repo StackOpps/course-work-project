@@ -95,11 +95,19 @@ def main() -> int:
         )
 
         if job["Status"] == "COMPLETED":
+            validation_status = job.get("ValidationStatus")
+            if validation_status == "VALIDATING":
+                # Validation runs asynchronously after the restore job finishes;
+                # leave the job unrecorded (and out of already_recorded) so a
+                # later poll picks it up once validation reaches a terminal
+                # status instead of this run misrecording it as a failure.
+                continue
+
             recovery_point_created = recovery_point_created_at(client, args.vault_name, job["RecoveryPointArn"])
             result.finish(recovery_point_creation_time=recovery_point_created)
-            result.success = job.get("ValidationStatus") in (None, "SUCCESSFUL")
+            result.success = validation_status in (None, "SUCCESSFUL")
             if not result.success:
-                result.notes += f" - validation {job.get('ValidationStatus')}"
+                result.notes += f" - validation {validation_status}"
         else:
             result.recovery_completed_at = job.get("CompletionDate", job["CreationDate"]).isoformat()
             result.success = False
