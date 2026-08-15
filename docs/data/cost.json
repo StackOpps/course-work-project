@@ -1,17 +1,13 @@
 {
-  "as_of": "2026-08-14T07:56:39.020378+00:00",
+  "as_of": "2026-08-15T07:05:57.205764+00:00",
   "unit": "USD",
-  "period_start": "2026-07-31",
-  "period_end": "2026-08-14",
-  "total_cost": 40.06,
+  "period_start": "2026-08-01",
+  "period_end": "2026-08-15",
+  "total_cost": 45.48,
   "daily": [
     {
-      "date": "2026-07-31",
-      "amount": 0.0
-    },
-    {
       "date": "2026-08-01",
-      "amount": 7.18
+      "amount": 8.09
     },
     {
       "date": "2026-08-02",
@@ -60,6 +56,10 @@
     {
       "date": "2026-08-13",
       "amount": 7.37
+    },
+    {
+      "date": "2026-08-14",
+      "amount": 4.51
     }
   ],
   "by_service": [
@@ -68,12 +68,12 @@
       "amount": 19.96
     },
     {
-      "service": "Tax",
-      "amount": 6.68
+      "service": "AWS Backup",
+      "amount": 9.0
     },
     {
-      "service": "AWS Backup",
-      "amount": 4.5
+      "service": "Tax",
+      "amount": 7.59
     },
     {
       "service": "EC2 - Other",
