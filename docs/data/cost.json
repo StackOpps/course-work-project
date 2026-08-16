@@ -1,14 +1,10 @@
 {
-  "as_of": "2026-08-15T07:05:57.205764+00:00",
+  "as_of": "2026-08-16T07:08:12.876668+00:00",
   "unit": "USD",
-  "period_start": "2026-08-01",
-  "period_end": "2026-08-15",
-  "total_cost": 45.48,
+  "period_start": "2026-08-02",
+  "period_end": "2026-08-16",
+  "total_cost": 37.41,
   "daily": [
-    {
-      "date": "2026-08-01",
-      "amount": 8.09
-    },
     {
       "date": "2026-08-02",
       "amount": 0.0
@@ -59,7 +55,11 @@
     },
     {
       "date": "2026-08-14",
-      "amount": 4.51
+      "amount": 4.52
+    },
+    {
+      "date": "2026-08-15",
+      "amount": 0.01
     }
   ],
   "by_service": [
@@ -72,16 +72,16 @@
       "amount": 9.0
     },
     {
-      "service": "Tax",
-      "amount": 7.59
-    },
-    {
       "service": "EC2 - Other",
       "amount": 4.37
     },
     {
       "service": "Amazon Elastic Load Balancing",
       "amount": 2.01
+    },
+    {
+      "service": "Amazon Virtual Private Cloud",
+      "amount": 1.08
     }
   ]
 }
