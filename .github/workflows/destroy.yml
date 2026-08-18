@@ -6,8 +6,8 @@ on:
       Destroy-dr:
         description: "Destroy the DR-region infra/ stack (infra/ only"
         default: false
-  schedule:
-    - cron: '1 */2 * * *' # Run every 2 hours
+  # schedule:
+  #   - cron: '1 */2 * * *' # Run every 2 hours
 
 permissions:
   id-token: write
