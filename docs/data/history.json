@@ -1,1 +1,35 @@
-[]
+[
+  {
+    "resource_type": "RESTORE_TEST:RDS",
+    "resource_id": "arn:aws:rds:eu-west-1:624234316329:db:awsbackup-restore-test-ccbb0edf-ec03-464e-ae1c-2f5f106e705a",
+    "failure_triggered_at": "2026-08-18T20:23:34.618000+00:00",
+    "recovery_completed_at": "2026-08-18T20:40:21.592045+00:00",
+    "rto_seconds": 1006.974045,
+    "rpo_seconds": 6886.163,
+    "restore_job_id": "6d2059e3-2044-4f2c-9658-11b772bd52ec",
+    "success": true,
+    "notes": "AWS Backup native restore test (RDS, plan-driven)"
+  },
+  {
+    "resource_type": "RESTORE_TEST:RDS",
+    "resource_id": "arn:aws:rds:eu-west-1:624234316329:db:awsbackup-restore-test-09968561-0b94-49d7-ad52-4acb72e16764",
+    "failure_triggered_at": "2026-08-18T19:23:34.569000+00:00",
+    "recovery_completed_at": "2026-08-18T20:40:21.748940+00:00",
+    "rto_seconds": 4607.17994,
+    "rpo_seconds": 3286.114,
+    "restore_job_id": "94ad69f2-2631-4549-99f0-c58f9109fa27",
+    "success": false,
+    "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
+  },
+  {
+    "resource_type": "ENV",
+    "resource_id": "shop.crafthavens.com",
+    "failure_triggered_at": "2026-08-18T20:43:58Z",
+    "recovery_completed_at": "2026-08-18T20:53:12.224232+00:00",
+    "rto_seconds": 554.224232,
+    "rpo_seconds": 293.0,
+    "restore_job_id": null,
+    "success": true,
+    "notes": "Manual DR failover drill"
+  }
+]
