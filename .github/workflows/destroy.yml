@@ -3,10 +3,8 @@ name: "Destroy Infrastructure"
 on:
   workflow_dispatch:
     inputs:
-      Destroy-Backup:
-        description: "Also destroy backup/ (its vaults are Vault Lock-protected — this fails until a recovery point's 1-day minimum retention has passed)"
-        required: true
-        type: boolean
+      Destroy-dr:
+        description: "Destroy the DR-region infra/ stack (infra/ only"
         default: false
   schedule:
     - cron: '1 */2 * * *' # Run every 2 hours
@@ -30,6 +28,7 @@ jobs:
 
   terraform-destroy-dr-infra:
     uses: ./.github/workflows/_terraform.yml
+    if: ${{ inputs.Destroy-dr }}
     with:
       working-directory: infra/
       Destroy-infra: true
@@ -54,7 +53,6 @@ jobs:
   # leaving a plan pointed at a vault that's about to be emptied.
   terraform-destroy-restore-testing:
     uses: ./.github/workflows/_terraform.yml
-    if: ${{ inputs.Destroy-Backup }}
     with:
       working-directory: restore_testing/
       Destroy-infra: true
@@ -74,7 +72,6 @@ jobs:
   # retention window has actually elapsed.
   terraform-destroy-backup:
       uses: ./.github/workflows/_terraform.yml
-      if: ${{ inputs.Destroy-Backup }}
       needs: [terraform-destroy-infra, terraform-destroy-restore-testing]
       with:
         working-directory: backup/
