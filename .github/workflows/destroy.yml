@@ -7,6 +7,18 @@ on:
         description: "Destroy the DR-region infra/ stack (infra/ only"
         default: false
         type: boolean
+      Destroy-infra:
+        description: "Destroy the primary-region infra/ stack (infra/ only)"
+        default: false
+        type: boolean
+      Destroy-backup:
+        description: "Destroy the backup/ stack (backup/ only)"
+        default: false
+        type: boolean
+      Destroy-restore-testing:
+        description: "Destroy the restore_testing/ stack (restore_testing/ only)"
+        default: false
+        type: boolean
   # schedule:
   #   - cron: '1 */2 * * *' # Run every 2 hours
 
@@ -16,6 +28,7 @@ permissions:
 jobs:
   terraform-destroy-infra:
     uses: ./.github/workflows/_terraform.yml
+    if : ${{ inputs.Destroy-infra }}
     with:
       working-directory: infra/
       Destroy-infra: true
@@ -41,19 +54,9 @@ jobs:
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
 
-  # Not part of the scheduled 2-hourly teardown: aws_backup_restore_testing_plan
-  # gets a new AWS-assigned plan ARN every time Terraform recreates it, and
-  # record_restore_testing_results.py looks up jobs against whatever plan
-  # currently exists - destroying and redeploying this on a 2-hourly cycle
-  # orphaned every completed test result, since the poller could never find
-  # jobs recorded under a since-deleted plan's ARN. It's also a lightweight
-  # control-plane resource, not standing compute, so leaving it up between
-  # infra/'s teardown cycles doesn't meaningfully add to the cost this
-  # schedule bounds. Runs on manual opt-in only - folded into Destroy-Backup
-  # since that's the only case it actually needs tearing down first, to avoid
-  # leaving a plan pointed at a vault that's about to be emptied.
   terraform-destroy-restore-testing:
     uses: ./.github/workflows/_terraform.yml
+    if: 
     with:
       working-directory: restore_testing/
       Destroy-infra: true
@@ -64,16 +67,10 @@ jobs:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
 
-  # Not part of the scheduled 2-hourly teardown above: backup/'s vaults are
-  # Vault Lock-protected (backup/vault.tf), so emptying them before their
-  # recovery points' 1-day minimum retention has passed would just fail. The
-  # vaults hold nothing but backup storage, not compute, so leaving them up
-  # between runs doesn't meaningfully add to what infra/'s 2-hourly teardown
-  # already bounds - this only runs on an explicit manual opt-in once that
-  # retention window has actually elapsed.
   terraform-destroy-backup:
       uses: ./.github/workflows/_terraform.yml
       needs: [terraform-destroy-infra, terraform-destroy-restore-testing]
+      if: ${{ inputs.Destroy-backup }}
       with:
         working-directory: backup/
         Destroy-infra: true
