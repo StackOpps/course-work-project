@@ -378,13 +378,15 @@
 
   <section class="result-group" id="section-cost">
     <h2><span class="fig-swatch" style="background:var(--series-cost)"></span>AWS Cost</h2>
-    <p class="section-sub">Whole-account spend, pulled daily from Cost Explorer.</p>
+    <p class="section-sub">Pulled daily from Cost Explorer — whole-account total, plus a per-workload split by each stack's <code>Stack</code> tag.</p>
     <div id="empty-cost" class="empty-state" hidden>
       No cost data recorded yet <code>record_cost.yml</code> polls Cost
       Explorer daily, or trigger it manually for an on-demand refresh.
     </div>
     <div id="body-cost" hidden>
       <div class="tiles" id="tiles-cost"></div>
+      <p class="section-sub" style="margin-top:20px">Spend by workload (<code>Stack</code> tag)</p>
+      <div class="tiles" id="tiles-cost-workload"></div>
       <div class="charts-row">
         <figure>
           <figcaption><span class="fig-swatch" style="background:var(--series-cost)"></span>Daily spend</figcaption>
@@ -664,6 +666,17 @@
     tile(tilesEl, "Daily average", formatCurrency(dailyAvg), null, "cost");
     tile(tilesEl, "Top service", topService ? topService.service + " (" + formatCurrency(topService.amount) + ")" : "—");
     tile(tilesEl, "Last polled", new Date(cost.as_of).toLocaleString());
+
+    const workloadEl = document.getElementById("tiles-cost-workload");
+    workloadEl.innerHTML = "";
+    if (cost.by_workload && cost.by_workload.length) {
+      cost.by_workload.forEach(function (w) {
+        const label = w.workload.charAt(0).toUpperCase() + w.workload.slice(1);
+        tile(workloadEl, label, formatCurrency(w.amount), null, "cost");
+      });
+    } else {
+      workloadEl.innerHTML = '<p class="section-sub">No per-workload split yet — the <code>Stack</code> cost allocation tag can take up to 24h after activation to appear.</p>';
+    }
 
     const points = cost.daily.map(function (d) { return { y: d.amount, label: formatDate(d.date) }; });
     buildLineChart(document.getElementById("chart-cost"), points, css("--series-cost"), formatCurrency);

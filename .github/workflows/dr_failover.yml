@@ -6,6 +6,16 @@ name: "DR Failover"
 # identical whether started by a human or an automated site-down signal, so
 # this repo doesn't wire up automatic detection; a button click on this
 # workflow exercises the same path an alarm would.
+#
+# By default this drill restores whatever the latest snapshot happens to be,
+# which has so far been a near-empty seed.php-scale DB — RTO measured
+# against it understates a production-scale restore. RDS infers restore
+# size from the snapshot, not from this run (infra/database.tf leaves
+# allocated_storage unset on the DR apply), so there's no input here to
+# make a single drill "realistic": size main.yml's db-allocated-storage
+# input up, deploy infra/ against primary, run trigger_backup.yml to get a
+# fresh snapshot at that size copied to the DR vault, then dispatch this
+# workflow as normal.
 on:
   workflow_dispatch: {}
 

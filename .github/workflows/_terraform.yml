@@ -39,6 +39,10 @@ on:
         description: "Terraform version to use"
         type: string
         default: "1.13.0"
+      db-allocated-storage:
+        description: "Overrides TF_VAR_db_allocated_storage (infra/ only; ignored by stacks with no such variable). Only affects a primary-region apply — a DR-region restore infers size from the snapshot being restored, so use this to resize primary ahead of a fresh backup, not on the DR apply itself."
+        type: string
+        default: "60"
 
     outputs:
       alb_dns_name:
@@ -112,6 +116,7 @@ jobs:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
           TF_VAR_app_domain_name: ${{ vars.APP_DOMAIN_NAME }}
+          TF_VAR_db_allocated_storage: ${{ inputs.db-allocated-storage }}
 
       - name: Terraform Deploy
         if: ${{ inputs.Deploy-Infra || inputs.Deploy-Backup }}

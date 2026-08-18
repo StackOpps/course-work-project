@@ -20,6 +20,7 @@ provider "aws" {
       Project     = "Crafthavens"
       Environment = var.environment
       ManagedBy   = "Terraform"
+      Stack       = "infra"
     }
   }
 }

@@ -18,6 +18,11 @@ on:
           required: true
           type: boolean
           default: false
+        db-allocated-storage:
+          description: "RDS storage (GB) for this primary-region apply. Bump this ahead of a trigger_backup.yml + dr_failover.yml run to size a DR drill's RDS restore realistically — the DR-region apply always inherits size from whichever snapshot it restores, so this only takes effect via a fresh backup taken after this deploy."
+          required: true
+          type: string
+          default: "60"
 
 permissions:
   id-token: write
@@ -31,6 +36,7 @@ jobs:
       Deploy-Infra: true
       aws-region: eu-west-2
       environment: development
+      db-allocated-storage: ${{ inputs.db-allocated-storage }}
     secrets:
       AWS_ACCESS_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_KEY_PLATFORM }}
       AWS_ACCESS_SECRET_KEY_PLATFORM: ${{ secrets.AWS_ACCESS_SECRET_KEY_PLATFORM }}
