@@ -56,7 +56,7 @@ jobs:
 
   terraform-destroy-restore-testing:
     uses: ./.github/workflows/_terraform.yml
-    if: 
+    if: ${{ inputs.Destroy-restore-testing }}
     with:
       working-directory: restore_testing/
       Destroy-infra: true
