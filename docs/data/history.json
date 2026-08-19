@@ -31,5 +31,16 @@
     "restore_job_id": "f3bccdcc-4f89-45d8-971d-d693bc523a33",
     "success": true,
     "notes": "AWS Backup native restore test (RDS, plan-driven)"
+  },
+  {
+    "resource_type": "RESTORE_TEST:RDS",
+    "resource_id": "arn:aws:rds:eu-west-1:624234316329:db:awsbackup-restore-test-93e63946-c087-4b8e-8ac8-40f86453ed57",
+    "failure_triggered_at": "2026-08-19T16:36:47.793000+00:00",
+    "recovery_completed_at": "2026-08-19T16:46:08.147985+00:00",
+    "rto_seconds": 560.354985,
+    "rpo_seconds": 3316.808,
+    "restore_job_id": "7bcfba23-9eb8-4366-adae-112543526fdc",
+    "success": true,
+    "notes": "AWS Backup native restore test (RDS, plan-driven)"
   }
 ]
