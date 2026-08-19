@@ -53,5 +53,16 @@
     "restore_job_id": null,
     "success": true,
     "notes": "Manual DR failover drill"
+  },
+  {
+    "resource_type": "RESTORE_TEST:RDS",
+    "resource_id": "arn:aws:rds:eu-west-1:624234316329:db:awsbackup-restore-test-b087772e-87ae-4088-be95-b38acc8e7f6b",
+    "failure_triggered_at": "2026-08-19T15:39:46.743000+00:00",
+    "recovery_completed_at": "2026-08-19T17:39:46.619517+00:00",
+    "rto_seconds": 7199.876517,
+    "rpo_seconds": 6163.592,
+    "restore_job_id": "b705df49-5cb4-4c47-958a-e816de0627ed",
+    "success": false,
+    "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
   }
 ]
