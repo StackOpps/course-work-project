@@ -97,5 +97,16 @@
     "restore_job_id": "bc500ae2-7804-4bbd-bd0f-224b3951f2a7",
     "success": false,
     "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
+  },
+  {
+    "resource_type": "ENV",
+    "resource_id": "shop.crafthavens.com",
+    "failure_triggered_at": "2026-08-19T20:09:02Z",
+    "recovery_completed_at": "2026-08-19T20:19:43.149308+00:00",
+    "rto_seconds": 641.149308,
+    "rpo_seconds": 4495.0,
+    "restore_job_id": null,
+    "success": true,
+    "notes": "Manual DR failover drill"
   }
 ]
