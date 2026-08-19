@@ -130,5 +130,27 @@
     "restore_job_id": "f3a18807-df08-47a5-a021-5a6e534e935a",
     "success": false,
     "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
+  },
+  {
+    "resource_type": "RESTORE_TEST:RDS",
+    "resource_id": "arn:aws:rds:eu-west-1:624234316329:db:awsbackup-restore-test-a3e395a5-c3d6-4313-b890-62a76a01439c",
+    "failure_triggered_at": "2026-08-19T22:16:21.479000+00:00",
+    "recovery_completed_at": "2026-08-19T23:35:39.063610+00:00",
+    "rto_seconds": 4757.58461,
+    "rpo_seconds": 12390.787,
+    "restore_job_id": "a1e20ebf-f32b-4e2b-8463-cf8d2c3ed3b9",
+    "success": false,
+    "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
+  },
+  {
+    "resource_type": "RESTORE_TEST:RDS",
+    "resource_id": "arn:aws:rds:eu-west-1:624234316329:db:awsbackup-restore-test-ce1247da-d24d-4c58-b30d-751bf6ff3cfc",
+    "failure_triggered_at": "2026-08-19T21:39:46.607000+00:00",
+    "recovery_completed_at": "2026-08-19T23:35:39.205680+00:00",
+    "rto_seconds": 6952.59868,
+    "rpo_seconds": 10195.915,
+    "restore_job_id": "af30d6f7-fbce-4e77-89a1-1f6273ee2fed",
+    "success": false,
+    "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
   }
 ]
