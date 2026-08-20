@@ -295,5 +295,16 @@
     "restore_job_id": "19de2b99-ef13-431b-ae7e-e79b0c3ddef6",
     "success": false,
     "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
+  },
+  {
+    "resource_type": "RESTORE_TEST:RDS",
+    "resource_id": "arn:aws:rds:eu-west-1:624234316329:db:awsbackup-restore-test-ddc917ce-64e1-44df-b63e-91110bbaf46a",
+    "failure_triggered_at": "2026-08-20T12:39:46.521000+00:00",
+    "recovery_completed_at": "2026-08-20T13:59:02.305246+00:00",
+    "rto_seconds": 4755.784246,
+    "rpo_seconds": 64195.829,
+    "restore_job_id": "2762329e-9a55-4159-bc9c-82826b0577cd",
+    "success": false,
+    "notes": "AWS Backup native restore test (RDS, plan-driven) - validation TIMED_OUT"
   }
 ]
