@@ -1,14 +1,10 @@
 {
-  "as_of": "2026-08-30T12:04:57.343908+00:00",
+  "as_of": "2026-08-31T14:14:15.689921+00:00",
   "unit": "USD",
-  "period_start": "2026-08-16",
-  "period_end": "2026-08-30",
-  "total_cost": 135.98,
+  "period_start": "2026-08-17",
+  "period_end": "2026-08-31",
+  "total_cost": 136.0,
   "daily": [
-    {
-      "date": "2026-08-16",
-      "amount": 0.01
-    },
     {
       "date": "2026-08-17",
       "amount": 0.01
@@ -60,12 +56,16 @@
     {
       "date": "2026-08-29",
       "amount": 0.02
+    },
+    {
+      "date": "2026-08-30",
+      "amount": 0.02
     }
   ],
   "by_service": [
     {
       "service": "Amazon Relational Database Service",
-      "amount": 64.62
+      "amount": 64.63
     },
     {
       "service": "AWS Backup",
@@ -87,7 +87,7 @@
   "by_workload": [
     {
       "workload": "Untagged",
-      "amount": 135.98
+      "amount": 136.0
     }
   ]
 }
