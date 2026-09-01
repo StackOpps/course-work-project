@@ -1,14 +1,10 @@
 {
-  "as_of": "2026-08-31T14:14:15.689921+00:00",
+  "as_of": "2026-09-01T11:52:38.404445+00:00",
   "unit": "USD",
-  "period_start": "2026-08-17",
-  "period_end": "2026-08-31",
-  "total_cost": 136.0,
+  "period_start": "2026-08-18",
+  "period_end": "2026-09-01",
+  "total_cost": 136.01,
   "daily": [
-    {
-      "date": "2026-08-17",
-      "amount": 0.01
-    },
     {
       "date": "2026-08-18",
       "amount": 2.13
@@ -60,6 +56,10 @@
     {
       "date": "2026-08-30",
       "amount": 0.02
+    },
+    {
+      "date": "2026-08-31",
+      "amount": 0.02
     }
   ],
   "by_service": [
@@ -87,7 +87,7 @@
   "by_workload": [
     {
       "workload": "Untagged",
-      "amount": 136.0
+      "amount": 136.01
     }
   ]
 }
