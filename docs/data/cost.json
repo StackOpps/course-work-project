@@ -1,14 +1,10 @@
 {
-  "as_of": "2026-09-07T12:51:52.413385+00:00",
+  "as_of": "2026-09-08T11:32:51.132874+00:00",
   "unit": "USD",
-  "period_start": "2026-08-24",
-  "period_end": "2026-09-07",
-  "total_cost": 11.37,
+  "period_start": "2026-08-25",
+  "period_end": "2026-09-08",
+  "total_cost": 11.97,
   "daily": [
-    {
-      "date": "2026-08-24",
-      "amount": 0.03
-    },
     {
       "date": "2026-08-25",
       "amount": 0.02
@@ -39,7 +35,7 @@
     },
     {
       "date": "2026-09-01",
-      "amount": 0.64
+      "amount": 0.75
     },
     {
       "date": "2026-09-02",
@@ -60,20 +56,24 @@
     {
       "date": "2026-09-06",
       "amount": 0.02
+    },
+    {
+      "date": "2026-09-07",
+      "amount": 0.52
     }
   ],
   "by_service": [
     {
       "service": "Amazon Relational Database Service",
-      "amount": 7.44
+      "amount": 7.74
     },
     {
       "service": "EC2 - Other",
-      "amount": 1.52
+      "amount": 1.63
     },
     {
       "service": "Amazon Elastic Load Balancing",
-      "amount": 0.74
+      "amount": 0.79
     },
     {
       "service": "Amazon Route 53",
@@ -81,13 +81,13 @@
     },
     {
       "service": "Amazon Virtual Private Cloud",
-      "amount": 0.42
+      "amount": 0.44
     }
   ],
   "by_workload": [
     {
       "workload": "Untagged",
-      "amount": 11.37
+      "amount": 11.97
     }
   ]
 }
