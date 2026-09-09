@@ -1,14 +1,10 @@
 {
-  "as_of": "2026-09-08T11:32:51.132874+00:00",
+  "as_of": "2026-09-09T11:39:43.199932+00:00",
   "unit": "USD",
-  "period_start": "2026-08-25",
-  "period_end": "2026-09-08",
+  "period_start": "2026-08-26",
+  "period_end": "2026-09-09",
   "total_cost": 11.97,
   "daily": [
-    {
-      "date": "2026-08-25",
-      "amount": 0.02
-    },
     {
       "date": "2026-08-26",
       "amount": 0.02
@@ -60,6 +56,10 @@
     {
       "date": "2026-09-07",
       "amount": 0.52
+    },
+    {
+      "date": "2026-09-08",
+      "amount": 0.02
     }
   ],
   "by_service": [
@@ -77,7 +77,7 @@
     },
     {
       "service": "Amazon Route 53",
-      "amount": 0.5
+      "amount": 0.51
     },
     {
       "service": "Amazon Virtual Private Cloud",
