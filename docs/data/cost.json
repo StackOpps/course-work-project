@@ -1,14 +1,10 @@
 {
-  "as_of": "2026-10-01T13:40:44.348610+00:00",
+  "as_of": "2026-10-02T12:57:33.090093+00:00",
   "unit": "USD",
-  "period_start": "2026-09-17",
-  "period_end": "2026-10-01",
-  "total_cost": 0.28,
+  "period_start": "2026-09-18",
+  "period_end": "2026-10-02",
+  "total_cost": 0.86,
   "daily": [
-    {
-      "date": "2026-09-17",
-      "amount": 0.02
-    },
     {
       "date": "2026-09-18",
       "amount": 0.02
@@ -60,16 +56,24 @@
     {
       "date": "2026-09-30",
       "amount": 0.02
+    },
+    {
+      "date": "2026-10-01",
+      "amount": 0.6
     }
   ],
   "by_service": [
     {
-      "service": "AWS Cost Explorer",
-      "amount": 0.28
+      "service": "Amazon Route 53",
+      "amount": 0.5
     },
     {
-      "service": "Amazon Route 53",
-      "amount": 0.0
+      "service": "AWS Cost Explorer",
+      "amount": 0.26
+    },
+    {
+      "service": "Tax",
+      "amount": 0.1
     },
     {
       "service": "Amazon Simple Storage Service",
@@ -79,7 +83,7 @@
   "by_workload": [
     {
       "workload": "Untagged",
-      "amount": 0.28
+      "amount": 0.86
     }
   ]
 }
