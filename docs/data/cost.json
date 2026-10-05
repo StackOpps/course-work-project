@@ -1,14 +1,10 @@
 {
-  "as_of": "2026-10-04T12:40:42.570749+00:00",
+  "as_of": "2026-10-05T15:05:17.726186+00:00",
   "unit": "USD",
-  "period_start": "2026-09-20",
-  "period_end": "2026-10-04",
-  "total_cost": 0.89,
+  "period_start": "2026-09-21",
+  "period_end": "2026-10-05",
+  "total_cost": 0.9,
   "daily": [
-    {
-      "date": "2026-09-20",
-      "amount": 0.02
-    },
     {
       "date": "2026-09-21",
       "amount": 0.02
@@ -51,7 +47,7 @@
     },
     {
       "date": "2026-10-01",
-      "amount": 0.63
+      "amount": 0.64
     },
     {
       "date": "2026-10-02",
@@ -59,6 +55,10 @@
     },
     {
       "date": "2026-10-03",
+      "amount": 0.02
+    },
+    {
+      "date": "2026-10-04",
       "amount": 0.02
     }
   ],
@@ -73,7 +73,7 @@
     },
     {
       "service": "Tax",
-      "amount": 0.11
+      "amount": 0.12
     },
     {
       "service": "Amazon Simple Storage Service",
@@ -83,7 +83,7 @@
   "by_workload": [
     {
       "workload": "Untagged",
-      "amount": 0.89
+      "amount": 0.9
     }
   ]
 }
